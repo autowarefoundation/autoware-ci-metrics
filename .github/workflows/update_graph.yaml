@@ -24,7 +24,7 @@ jobs:
         pip install requests matplotlib
 
     - name: Execute script
-      run: python awf_autoware_build_main_self_hosted.py --github_token ${{ secrets.GH_PAT }}
+      run: python scripts/awf_autoware_build_main_self_hosted.py --github_token ${{ secrets.GH_PAT }}
 
     - name: Archive output files
       uses: actions/upload-artifact@v2
