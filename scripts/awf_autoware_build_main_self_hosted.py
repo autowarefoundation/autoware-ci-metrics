@@ -75,4 +75,10 @@ plt.title('GitHub Action Execution Time')
 plt.grid(True)
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.show()
+
+# Save the graph as an image
+output_graph_filename = "output_graph.png"
+plt.savefig(output_graph_filename)
+
+# If you still want to show the graph (not necessary for the GitHub Actions workflow)
+# plt.show()
