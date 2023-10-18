@@ -36,8 +36,8 @@ jobs:
     
     - name: Commit and push output files
       run: |
-        git config user.name "GitHub Actions Bot"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config user.name "Kotaro Yoshimoto"
+        git config user.email "pythagora.yoshimoto@gmail.com"
         git add github_action_data.csv output_graph.png
         git commit -m "Automated commit: Updated GitHub Action outputs."
         git push
