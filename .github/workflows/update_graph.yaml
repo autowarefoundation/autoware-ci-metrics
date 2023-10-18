@@ -39,10 +39,9 @@ jobs:
         path: |
           github_action_data.csv
           output_graph.png
-    
-    - uses: EndBug/add-and-commit@v9
+
+    - name: Push changes
+      uses: ad-m/github-push-action@master
       with:
-        message: '[automated] file upload'
-        add: |
-          github_action_data.csv
-          output_graph.png
+        github_token: ${{ secrets.GH_PAT }}
+        branch: ${{ github.ref }}
