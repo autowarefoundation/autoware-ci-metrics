@@ -34,7 +34,7 @@ pages_needed = (total_count + 99) // 100  # This calculates the ceiling of total
 
 # Generate the list of page numbers
 page_list = list(range(1, pages_needed + 1))
-
+page_list.reverse()
 
 for page in page_list:
     payloads["page"] = page
