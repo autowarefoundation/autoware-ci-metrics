@@ -1,1 +1,35 @@
-a
+name: Execute and Save Outputs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests matplotlib
+
+    - name: Execute script
+      run: python your_script_name.py --github_token ${{ secrets.YOUR_SECRET_NAME }}
+
+    - name: Archive output files
+      uses: actions/upload-artifact@v2
+      with:
+        name: output-files
+        path: |
+          github_action_data.csv
+          output_graph.png
