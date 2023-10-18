@@ -24,7 +24,7 @@ jobs:
         pip install requests matplotlib
 
     - name: Execute script
-      run: python your_script_name.py --github_token ${{ secrets.YOUR_SECRET_NAME }}
+      run: python your_script_name.py --github_token ${{ secrets.GH_PAT }}
 
     - name: Archive output files
       uses: actions/upload-artifact@v2
