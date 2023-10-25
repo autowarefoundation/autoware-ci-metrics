@@ -10,38 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Configure git with GitHub token
-      run: |
-        git config user.name "GitHub Actions Bot"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}
-        
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
+      - name: Configure git with GitHub token
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://${{ github.token }}@github.com/${{ github.repository }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests matplotlib
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
 
-    - name: Execute script
-      run: python scripts/awf_autoware_build_main_self_hosted.py --github_token ${{ secrets.GH_PAT }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests matplotlib
 
-    - name: Archive output files
-      uses: actions/upload-artifact@v2
-      with:
-        name: output-files
-        path: |
-          github_action_data.csv
-          output_graph.png
+      - name: Execute script
+        run: python scripts/awf_autoware_build_main_self_hosted.py --github_token ${{ github.token }}
 
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GH_PAT }}
-        branch: ${{ github.ref }}
+      - name: Archive output files
+        uses: actions/upload-artifact@v2
+        with:
+          name: output-files
+          path: |
+            github_action_data.csv
+            output_graph.png
