@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Autoware CI Analysis</title>
+    <link
+      href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"
+      rel="stylesheet"
+    />
+    <script
+      type="text/javascript"
+      src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  </head>
+  <body>
+    <h1>Autoware CI Analysis</h1>
+    <h2>Total build duration</h2>
+    <div id="build-time-chart"></div>
+    <h2>Package build time analysis</h2>
+    <div id="package-table"></div>
+    <script>
+      fetch('github_action_data.json')
+        .then((res) => res.json())
+        .then((json) => {
+          const buildDurationOptions = {
+            series: [
+              {
+                name: 'Build duration',
+                data: json.workflow_time.map((data) => {
+                  return [new Date(data.date), data.duration];
+                }),
+              },
+            ],
+            chart: {
+              height: 350,
+              type: 'line',
+              zoom: {
+                enabled: false,
+              },
+            },
+            dataLabels: {
+              enabled: false,
+            },
+            title: {
+              text: 'Build duration',
+              align: 'left',
+            },
+            grid: {
+              row: {
+                colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+                opacity: 0.5,
+              },
+            },
+            xaxis: {
+              type: 'datetime',
+            },
+            yaxis: {
+              labels: {
+                formatter: function (val) {
+                  return `${val.toFixed(2)}h`;
+                },
+              },
+              title: {
+                text: 'Duration',
+              },
+            },
+            tooltip: {
+              y: {
+                formatter: function (val) {
+                  return `${val.toFixed(2)}h`;
+                },
+              },
+            },
+          };
+
+          const buildDurationChart = new ApexCharts(
+            document.querySelector('#build-time-chart'),
+            buildDurationOptions,
+          );
+          buildDurationChart.render();
+        });
+    </script>
+  </body>
+</html>
