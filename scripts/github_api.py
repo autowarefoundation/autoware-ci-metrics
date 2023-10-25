@@ -13,9 +13,11 @@ class GitHubWorkflowAPI:
         }
         self.time_format = "%Y-%m-%dT%H:%M:%SZ"
 
-    def get_workflow_duration_list(self, workflow_id: str, accurate=False):
+    def get_workflow_duration_list(self, repo: str, workflow_id: str, accurate=False):
         payloads = {"per_page": 100, "status": "success", "page": "1"}
-        endpoint = f"https://api.github.com/repos/autowarefoundation/autoware/actions/workflows/{workflow_id}/runs"
+        endpoint = (
+            f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
+        )
 
         first_page_response = requests.get(
             endpoint, headers=self.headers, params=payloads
@@ -68,3 +70,23 @@ class GitHubWorkflowAPI:
                 run["duration"] += (completed_at - started_at).total_seconds()
 
         return workflow_runs
+
+    def get_workflow_logs(self, repo: str, run_id: str):
+        import zipfile
+        from io import BytesIO
+
+        # This endpoint redirects to a zip file
+        endpoint = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
+        response = requests.get(
+            endpoint, headers=self.headers, allow_redirects=True
+        ).content
+
+        response = zipfile.ZipFile(BytesIO(response))
+
+        # Extract all of log file into memory as string
+        logs = {}
+
+        for filename in response.namelist():
+            logs[filename] = response.read(filename).decode("utf-8")
+
+        return logs
