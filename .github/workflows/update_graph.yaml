@@ -8,7 +8,10 @@ on:
 jobs:
   execute:
     runs-on: ubuntu-latest
-
+    permissions:
+      pages: write
+      id-token: write
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
