@@ -26,18 +26,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests matplotlib
 
+      - name: Restore cache
+        uses: actions/cache@v2
+        with:
+          path: cache
+          key: actions
+
       - name: Execute script
         run: |
+          mkdir cache
           python scripts/awf_autoware_build_main_self_hosted.py --github_token ${{ github.token }}
           cp github_action_data.json public/
-
-      - name: Archive output files
-        uses: actions/upload-artifact@v2
-        with:
-          name: output-files
-          path: |
-            github_action_data.csv
-            output_graph.png
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v2
