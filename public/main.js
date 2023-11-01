@@ -11,7 +11,7 @@ fetch('github_action_data.json')
     const allPackageDurationOptions = {
       series: [],
       chart: {
-        height: 350,
+        height: 500,
         type: 'donut',
         zoom: {
           enabled: false,
