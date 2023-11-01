@@ -1,6 +1,12 @@
 fetch('github_action_data.json')
   .then((res) => res.json())
   .then((json) => {
+    const packageList = new Set(
+      json.workflow_time.flatMap((data) => Object.keys(data.details ?? {})),
+    );
+    const mmss = (seconds) =>
+      `${Math.ceil(seconds / 60)}m${(seconds % 60).toFixed(0)}s`;
+
     // Package duration chart
     const allPackageDurationOptions = {
       series: [],
@@ -34,9 +40,7 @@ fetch('github_action_data.json')
       },
       tooltip: {
         y: {
-          formatter: function (val) {
-            return `${Math.ceil(val / 60)}m${(val % 60).toFixed(0)}s`;
-          },
+          formatter: mmss,
         },
       },
     };
@@ -74,6 +78,82 @@ fetch('github_action_data.json')
     };
 
     // Each package duration chart
+    const multiPackageDurationOptions = {
+      series: [],
+      chart: {
+        height: 350,
+        type: 'line',
+        zoom: {
+          enabled: false,
+        },
+        selection: {
+          enabled: true,
+        },
+        events: {
+          click: (_event, _chartContext, config) => {
+            const dataPoint = config.dataPointIndex;
+            if (dataPoint === undefined) {
+              return;
+            }
+
+            showAllPackageDuration(dataPoint);
+          },
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'Build duration',
+        align: 'left',
+      },
+      grid: {
+        row: {
+          colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+          opacity: 0.5,
+        },
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+      yaxis: {
+        labels: {
+          formatter: (val) => val && mmss(val),
+        },
+        title: {
+          text: 'Duration',
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: (val) => val && mmss(val),
+        },
+      },
+    };
+
+    const multiPackageDurationChart = new ApexCharts(
+      document.querySelector('#package-time-chart'),
+      multiPackageDurationOptions,
+    );
+    multiPackageDurationChart.render();
+
+    // Handler
+    const showPackageDuration = (packageName) => {
+      const packageSelector = document.querySelector('#package-select');
+      packageSelector.value = packageName;
+
+      const packageData = json.workflow_time.map((data) => [
+        new Date(data.date),
+        data.details?.[packageName] ?? null,
+      ]);
+
+      multiPackageDurationChart.updateSeries([
+        {
+          name: packageName,
+          data: packageData,
+        },
+      ]);
+    };
 
     // Build duration chart
     const buildDurationOptions = {
@@ -159,14 +239,19 @@ fetch('github_action_data.json')
 
     // Package selector
     const packageSelector = document.querySelector('#package-select');
-    Object.keys(json.package_time)
+
+    Array.from(packageList)
       .sort()
       .forEach((key) => {
         const option = document.createElement('option');
         option.value = key;
-        option.text = `${key} (${json.package_time[key].length} builds)`;
+        option.text = `${key}`;
         packageSelector.appendChild(option);
       });
+
+    packageSelector.addEventListener('change', (event) => {
+      showPackageDuration(event.target.value);
+    });
 
     // Package table
     const packageTable = document.querySelector('#package-table');
