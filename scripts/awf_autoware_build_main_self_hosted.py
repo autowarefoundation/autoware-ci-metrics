@@ -1,3 +1,4 @@
+from datetime import datetime
 import matplotlib.pyplot as plt
 import csv
 import argparse
@@ -9,6 +10,26 @@ from colcon_log_analyzer import ColconLogAnalyzer
 REPO = "autowarefoundation/autoware"
 WORKFLOW_ID = "build-main-self-hosted.yaml"
 BUILD_LOG_ID = "build-main-self-hosted/9_Build.txt"
+CACHE_DIR = "./cache/"
+
+
+# Utility function
+def try_cache(key: str, f):
+    import pathlib
+    import json
+
+    key = key.replace("/", "_")
+    cache_path = pathlib.Path(CACHE_DIR) / key
+
+    if cache_path.exists():
+        with open(cache_path, "r") as cache_file:
+            return json.load(cache_file)
+    else:
+        result = f()
+        with open(cache_path, "w") as cache_file:
+            json.dump(result, cache_file, indent=4)
+        return result
+
 
 # Setup argparse to parse command-line arguments
 parser = argparse.ArgumentParser(
@@ -74,27 +95,22 @@ plt.savefig(output_graph_filename)
 # Log analysis
 ####################
 
-# Sample some of the logs
-# criteria(TODO): first build of each month
-# assumption: workflow_runs is sorted by created_at
-log_sample_run = {}
-
-for run in workflow_runs:
-    year_month = run["created_at"].strftime("%Y-%m")
-    if year_month not in log_sample_run:
-        log_sample_run[year_month] = run
-
-log_sample_run = list(log_sample_run.values())
-
 package_duration_logs = {}
 
 # Fetch logs
 # Log may be removed, so handling 404 error is necessary
-for run in log_sample_run:
+for run in workflow_runs:
+    # older than 90 days
+    if (datetime.now() - run["created_at"]).days > 90:
+        continue
+
     try:
-        logs = workflow_api.get_workflow_logs(REPO, run["id"])
-    except:
-        print(f"Log for run_id={run['id']} cannot be fetched.")
+        logs = try_cache(
+            f"{REPO}-{run['id']}",
+            lambda: workflow_api.get_workflow_logs(REPO, run["id"]),
+        )
+    except Exception as e:
+        print(f"Log for run_id={run['id']} cannot be fetched. {e}")
         continue
 
     build_log_text = logs[BUILD_LOG_ID]
