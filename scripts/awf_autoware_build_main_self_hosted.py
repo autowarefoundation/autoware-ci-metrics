@@ -152,13 +152,6 @@ for run in workflow_runs:
         }
     )
 
-for logs in package_duration_logs.values():
-    for package, duration in logs["duration"].items():
-        if package not in json_data["package_time"]:
-            json_data["package_time"][package] = [duration]
-        else:
-            json_data["package_time"][package].append(duration)
-
 # Save the data to a JSON file
 import json
 
