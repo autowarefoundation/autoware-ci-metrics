@@ -1,5 +1,4 @@
 from datetime import datetime
-import matplotlib.pyplot as plt
 import csv
 import argparse
 
@@ -59,37 +58,6 @@ workflow_runs = workflow_api.get_workflow_duration_list(
 
 # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
 workflow_runs = [item for item in workflow_runs if item["duration"] < 3600 * 100]
-
-# Extract duration from each workflow run (for matplotlib)
-data = [[run["created_at"], run["duration"] / 3600] for run in workflow_runs]
-
-# Save the data to a CSV file
-with open("github_action_data.csv", "w", newline="") as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(["Date", "Duration (hours)"])  # Write header
-    for row in data:
-        writer.writerow(row)
-
-# If you want to plot, use the following:
-dates = [row[0] for row in data]
-durations = [row[1] for row in data]
-
-# Plotting the graph
-plt.figure(figsize=(10, 6))
-plt.plot(dates, durations, marker="o")
-plt.xlabel("Date")
-plt.ylabel("Duration (hours)")
-plt.title("GitHub Action Execution Time")
-plt.grid(True)
-plt.xticks(rotation=45)
-plt.tight_layout()
-
-# Save the graph as an image
-output_graph_filename = "output_graph.png"
-plt.savefig(output_graph_filename)
-
-# If you still want to show the graph (not necessary for the GitHub Actions workflow)
-# plt.show()
 
 ####################
 # Log analysis
