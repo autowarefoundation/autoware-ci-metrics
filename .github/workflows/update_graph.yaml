@@ -34,7 +34,7 @@ jobs:
 
       - name: Execute script
         run: |
-          mkdir cache
+          mkdir -p cache
           python scripts/awf_autoware_build_main_self_hosted.py --github_token ${{ github.token }}
           cp github_action_data.json public/
 
