@@ -253,14 +253,47 @@ fetch('github_action_data.json')
       showPackageDuration(event.target.value);
     });
 
-    // Package table
-    const packageTable = document.querySelector('#package-table');
-    const packageTableData = json.packages.map((data) => {
-      return {
-        name: data.name,
-        version: data.version,
-        size: data.size,
-        gzip: data.gzip,
-      };
-    });
+    // cSpell
+    const spellOptions = {
+      series: [
+        {
+          name: 'Spell check errors',
+          data: json.spell_checks.map((data) => {
+            return [new Date(data.date), data.count];
+          }),
+        },
+      ],
+      chart: {
+        height: 350,
+        type: 'line',
+        zoom: {
+          enabled: false,
+        },
+        selection: {
+          enabled: true,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'Spell check errors',
+        align: 'left',
+      },
+      grid: {
+        row: {
+          colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+          opacity: 0.5,
+        },
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+    };
+
+    const spellChart = new ApexCharts(
+      document.querySelector('#spell-chart'),
+      spellOptions,
+    );
+    spellChart.render();
   });
