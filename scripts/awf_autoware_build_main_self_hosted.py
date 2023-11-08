@@ -154,10 +154,34 @@ for run in spellcheck_runs:
         )
 
 ####################
+# Pull request analysis
+####################
+
+pull_requests_api = github_api.GithubPullRequestAPI(github_token)
+all_pr = pull_requests_api.get_all_pull_requests(SPELL_REPO)
+
+# Calculate average time to be closed
+closed_pr = [pr for pr in all_pr if pr["state"] == "closed"]
+print("Total closed PR:", len(all_pr))
+average_time_to_be_closed = sum(
+    [(pr["closed_at"] - pr["created_at"]).total_seconds() for pr in closed_pr]
+) / len(closed_pr)
+
+print("Average time to be closed:", average_time_to_be_closed)
+
+####################
 # Output JSON for Pages
 ####################
 
-json_data = {"workflow_time": [], "spell_checks": spell_checks}
+json_data = {
+    "workflow_time": [],
+    "spell_checks": spell_checks,
+    "pulls": {
+        "total": len(all_pr),
+        "closed": len(closed_pr),
+        "average_time_to_be_closed": average_time_to_be_closed,
+    },
+}
 
 for run in workflow_runs:
     json_data["workflow_time"].append(
