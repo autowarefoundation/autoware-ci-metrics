@@ -14,7 +14,7 @@ class GitHubWorkflowAPI:
         self.time_format = "%Y-%m-%dT%H:%M:%SZ"
 
     def get_workflow_duration_list(self, repo: str, workflow_id: str, accurate=False):
-        payloads = {"per_page": 100, "status": "success", "page": "1"}
+        payloads = {"per_page": 100, "status": "completed", "page": "1"}
         endpoint = (
             f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
         )
@@ -24,6 +24,8 @@ class GitHubWorkflowAPI:
         ).json()
 
         workflow_runs = first_page_response["workflow_runs"]
+
+        print(f"Total count: {first_page_response['total_count']}")
 
         # Reuse first_page_response to get the total count of workflow runs
         total_count = first_page_response["total_count"]
