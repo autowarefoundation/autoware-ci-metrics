@@ -1,5 +1,5 @@
 from datetime import datetime
-import csv
+import re
 import argparse
 
 import github_api
@@ -7,8 +7,14 @@ from colcon_log_analyzer import ColconLogAnalyzer
 
 # Constant
 REPO = "autowarefoundation/autoware"
-WORKFLOW_ID = "build-main-self-hosted.yaml"
+SPELL_REPO = "autowarefoundation/autoware.universe"
+
+BUILD_WORKFLOW_ID = "build-main-self-hosted.yaml"
 BUILD_LOG_ID = "build-main-self-hosted/9_Build.txt"
+
+SPELL_WORKFLOW_ID = "spell-check-all.yaml"
+SPELL_LOG_ID = "spell-check-all/3_Run spell-check.txt"
+
 CACHE_DIR = "./cache/"
 
 
@@ -48,7 +54,7 @@ workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
 # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
 workflow_runs = workflow_api.get_workflow_duration_list(
-    REPO, WORKFLOW_ID, accurate=False
+    REPO, BUILD_WORKFLOW_ID, accurate=False
 )
 
 ####################
@@ -70,6 +76,10 @@ package_duration_logs = {}
 for run in workflow_runs:
     # older than 90 days
     if (datetime.now() - run["created_at"]).days > 90:
+        continue
+
+    # skip
+    if run["conclusion"] != "success":
         continue
 
     try:
@@ -101,12 +111,53 @@ for run in workflow_runs:
         "duration": package_duration_dict,
     }
 
+####################
+# Spell check analysis
+####################
+
+spellcheck_runs = workflow_api.get_workflow_duration_list(
+    SPELL_REPO, SPELL_WORKFLOW_ID, accurate=False
+)
+
+spellcheck_re = re.compile(r"##\[error\](\d+) spelling issues found")
+spell_checks = []
+
+for run in spellcheck_runs:
+    # older than 90 days
+    if (datetime.now() - run["created_at"]).days > 90:
+        continue
+
+    try:
+        logs = try_cache(
+            f"{SPELL_REPO}-{run['id']}",
+            lambda: workflow_api.get_workflow_logs(SPELL_REPO, run["id"]),
+        )
+    except Exception as e:
+        print(f"Log for run_id={run['id']} cannot be fetched. {e}")
+        continue
+
+    spell_log_text = logs[SPELL_LOG_ID]
+    spellcheck_result = spellcheck_re.search(spell_log_text)
+
+    if spellcheck_result is not None:
+        spellcheck_count = int(spellcheck_result.group(1))
+        print(
+            f"Spell check error found in run_id={run['id']}, count={spellcheck_count}"
+        )
+
+        spell_checks.append(
+            {
+                "run_id": run["id"],
+                "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
+                "count": spellcheck_count,
+            }
+        )
 
 ####################
 # Output JSON for Pages
 ####################
 
-json_data = {"workflow_time": [], "package_time": {}}
+json_data = {"workflow_time": [], "spell_checks": spell_checks}
 
 for run in workflow_runs:
     json_data["workflow_time"].append(
