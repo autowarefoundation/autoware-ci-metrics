@@ -33,6 +33,8 @@ def try_cache(key: str, f):
             return json.load(cache_file)
     else:
         result = f()
+        if result is None:
+            raise Exception("Result is None")
         with open(cache_path, "w") as cache_file:
             json.dump(result, cache_file, indent=4)
         return result
@@ -126,13 +128,14 @@ spell_checks = []
 
 for run in spellcheck_runs:
     # older than 90 days
-    if (datetime.now() - run["created_at"]).days > 90:
-        continue
+    older_days = (datetime.now() - run["created_at"]).days
 
     try:
         logs = try_cache(
             f"{SPELL_REPO}-{run['id']}",
-            lambda: workflow_api.get_workflow_logs(SPELL_REPO, run["id"]),
+            lambda: workflow_api.get_workflow_logs(SPELL_REPO, run["id"])
+            if older_days < 90
+            else None,
         )
     except Exception as e:
         print(f"Log for run_id={run['id']} cannot be fetched. {e}")
