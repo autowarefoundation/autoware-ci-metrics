@@ -129,3 +129,41 @@ class GithubPullRequestAPI:
                 )
 
         return pull_requests
+
+
+class GithubPackagesAPI:
+    def __init__(self, github_token: str):
+        self.github_token = github_token
+        self.headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer " + github_token,
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        self.time_format = "%Y-%m-%dT%H:%M:%SZ"
+
+    def get_all_containers(self, org: str, pkg: str):
+        payloads = {"per_page": 100, "page": 1}
+        endpoint = (
+            f"https://api.github.com/orgs/{org}/packages/container/{pkg}/versions"
+        )
+        response = requests.get(endpoint, headers=self.headers, params=payloads).json()
+
+        packages = response
+
+        while len(response) == payloads["per_page"]:
+            payloads["page"] += 1
+            response = requests.get(
+                endpoint, headers=self.headers, params=payloads
+            ).json()
+
+            packages += response
+
+        for package in packages:
+            package["created_at"] = datetime.strptime(
+                package["created_at"], self.time_format
+            )
+            package["updated_at"] = datetime.strptime(
+                package["updated_at"], self.time_format
+            )
+
+        return packages

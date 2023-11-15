@@ -4,8 +4,10 @@ import argparse
 
 import github_api
 from colcon_log_analyzer import ColconLogAnalyzer
+from dxf import DXF
 
 import numpy as np
+import json
 
 # Constant
 REPO = "autowarefoundation/autoware"
@@ -16,6 +18,9 @@ BUILD_LOG_ID = "build-main-self-hosted/9_Build.txt"
 
 SPELL_WORKFLOW_ID = "spell-check-all.yaml"
 SPELL_LOG_ID = "spell-check-all/3_Run spell-check.txt"
+
+DOCKER_ORGS = "autowarefoundation"
+DOCKER_IMAGE = "autoware-universe"
 
 CACHE_DIR = "./cache/"
 
@@ -49,10 +54,16 @@ parser.add_argument(
     required=True,
     help="GitHub Token to authenticate with GitHub API.",
 )
+parser.add_argument(
+    "--github_actor",
+    required=True,
+    help="GitHub username to authenticate with GitHub API (Packages).",
+)
 args = parser.parse_args()
 
 # Use the github_token passed as command-line argument
 github_token = args.github_token
+github_actor = args.github_actor
 
 workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
@@ -195,6 +206,49 @@ for month in pr_per_month.keys():
     print("Avg: ", closed_time)
 
 ####################
+# Docker image analysis
+####################
+
+package_api = github_api.GithubPackagesAPI(github_token)
+packages = package_api.get_all_containers(DOCKER_ORGS, DOCKER_IMAGE)
+
+
+def auth(dxf, response):
+    dxf.authenticate(github_actor, github_token, response=response)
+
+
+docker_images = []
+
+dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
+for package in packages:
+    tag_count = len(package["metadata"]["container"]["tags"])
+    if tag_count == 0:
+        continue
+    tag = package["metadata"]["container"]["tags"][0]
+    if not tag.endswith("amd64") or "cuda" in tag or "prebuilt" not in tag:
+        continue
+
+    print(tag)
+    manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
+    if manifest is None:
+        print(f"Failed to fetch manifest for {tag}")
+        continue
+    metadata = json.loads(
+        (manifest["linux/amd64"] if type(manifest) is dict else manifest)
+    )
+    # print(metadata)
+
+    total_size = sum([layer["size"] for layer in metadata["layers"]])
+    docker_images.append(
+        {
+            "size": total_size,
+            "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
+            "tag": tag,
+        }
+    )
+
+
+####################
 # Output JSON for Pages
 ####################
 
@@ -204,9 +258,9 @@ json_data = {
     "pulls": {
         "total": len(all_pr),
         "closed": len(closed_pr),
-        "average_time_to_be_closed": average_time_to_be_closed,
         "closed_per_month": five_close_per_month,
     },
+    "docker_images": docker_images,
 }
 
 for run in workflow_runs:
@@ -222,7 +276,7 @@ for run in workflow_runs:
     )
 
 # Save the data to a JSON file
-import json
+
 
 with open("github_action_data.json", "w") as jsonfile:
     json.dump(json_data, jsonfile, indent=4)
