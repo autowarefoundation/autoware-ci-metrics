@@ -296,4 +296,50 @@ fetch('github_action_data.json')
       spellOptions,
     );
     spellChart.render();
+
+    // PR charts
+    const pullOptions = {
+      series: [
+        {
+          name: 'Duration (days)',
+          data: Object.keys(json.pulls.closed_per_month).map((month) => {
+            return [
+              month,
+              json.pulls.closed_per_month[month].map(
+                (durations) => durations / (60 * 60 * 24),
+              ),
+            ];
+          }),
+        },
+      ],
+      chart: {
+        height: 350,
+        type: 'boxPlot',
+        zoom: {
+          enabled: false,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'How long it takes to close a PR',
+        align: 'left',
+      },
+      grid: {
+        row: {
+          colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+          opacity: 0.5,
+        },
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+    };
+
+    const pullChart = new ApexCharts(
+      document.querySelector('#pr-chart'),
+      pullOptions,
+    );
+    pullChart.render();
   });

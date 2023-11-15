@@ -5,6 +5,8 @@ import argparse
 import github_api
 from colcon_log_analyzer import ColconLogAnalyzer
 
+import numpy as np
+
 # Constant
 REPO = "autowarefoundation/autoware"
 SPELL_REPO = "autowarefoundation/autoware.universe"
@@ -161,6 +163,9 @@ pull_requests_api = github_api.GithubPullRequestAPI(github_token)
 all_pr = pull_requests_api.get_all_pull_requests(SPELL_REPO)
 
 # Calculate average time to be closed
+pr_per_month = {}
+five_close_per_month = {}
+
 closed_pr = [pr for pr in all_pr if pr["state"] == "closed"]
 print("Total closed PR:", len(all_pr))
 average_time_to_be_closed = sum(
@@ -168,6 +173,23 @@ average_time_to_be_closed = sum(
 ) / len(closed_pr)
 
 print("Average time to be closed:", average_time_to_be_closed)
+
+for pr in closed_pr:
+    month = pr["closed_at"].strftime("%Y/%m")
+    if month not in pr_per_month:
+        pr_per_month[month] = []
+    pr_per_month[month].append(pr)
+
+for month in pr_per_month.keys():
+    print("PR: ", month, len(pr_per_month[month]))
+    closed_time = [
+        (pr["closed_at"] - pr["created_at"]).total_seconds()
+        for pr in pr_per_month[month]
+    ]
+    five_close_per_month[month] = np.quantile(
+        closed_time, [0, 0.25, 0.5, 0.75, 1]
+    ).tolist()
+    print("Avg: ", closed_time)
 
 ####################
 # Output JSON for Pages
@@ -180,6 +202,7 @@ json_data = {
         "total": len(all_pr),
         "closed": len(closed_pr),
         "average_time_to_be_closed": average_time_to_be_closed,
+        "closed_per_month": five_close_per_month,
     },
 }
 
