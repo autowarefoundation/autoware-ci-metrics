@@ -344,4 +344,54 @@ fetch('github_action_data.json')
       pullOptions,
     );
     pullChart.render();
+
+    // Docker
+    const dockerOptions = {
+      series: [
+        {
+          name: 'Image Size',
+          data: json.docker_images.map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+      ],
+      chart: {
+        height: 350,
+        type: 'line',
+        zoom: {
+          enabled: false,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'Docker Image Size',
+        align: 'left',
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+      yaxis: {
+        labels: {
+          formatter: (val) => `${val.toFixed(2)}GB`,
+        },
+        title: {
+          text: 'Size',
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: function (val) {
+            return `${val.toFixed(2)}GB`;
+          },
+        },
+      },
+    };
+
+    const dockerChart = new ApexCharts(
+      document.querySelector('#docker-chart'),
+      dockerOptions,
+    );
+    dockerChart.render();
   });
