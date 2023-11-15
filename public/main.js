@@ -227,10 +227,12 @@ fetch('github_action_data.json')
     // Build selector
     const buildSelector = document.querySelector('#build-select');
     json.workflow_time.forEach((data, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      option.text = `${data.date} (${data.duration.toFixed(2)}h)`;
-      buildSelector.appendChild(option);
+      if (data.details !== null) {
+        const option = document.createElement('option');
+        option.value = index;
+        option.text = `${data.date} (${data.duration.toFixed(2)}h)`;
+        buildSelector.appendChild(option);
+      }
     });
 
     buildSelector.addEventListener('change', (event) => {
