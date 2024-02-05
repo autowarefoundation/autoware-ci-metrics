@@ -227,10 +227,12 @@ fetch('github_action_data.json')
     // Build selector
     const buildSelector = document.querySelector('#build-select');
     json.workflow_time.forEach((data, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      option.text = `${data.date} (${data.duration.toFixed(2)}h)`;
-      buildSelector.appendChild(option);
+      if (data.details !== null) {
+        const option = document.createElement('option');
+        option.value = index;
+        option.text = `${data.date} (${data.duration.toFixed(2)}h)`;
+        buildSelector.appendChild(option);
+      }
     });
 
     buildSelector.addEventListener('change', (event) => {
@@ -296,4 +298,100 @@ fetch('github_action_data.json')
       spellOptions,
     );
     spellChart.render();
+
+    // PR charts
+    const pullOptions = {
+      series: [
+        {
+          name: 'Duration (days)',
+          data: Object.keys(json.pulls.closed_per_month).map((month) => {
+            return [
+              month,
+              json.pulls.closed_per_month[month].map(
+                (durations) => durations / (60 * 60 * 24),
+              ),
+            ];
+          }),
+        },
+      ],
+      chart: {
+        height: 350,
+        type: 'boxPlot',
+        zoom: {
+          enabled: false,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'How long it takes to close a PR',
+        align: 'left',
+      },
+      grid: {
+        row: {
+          colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+          opacity: 0.5,
+        },
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+    };
+
+    const pullChart = new ApexCharts(
+      document.querySelector('#pr-chart'),
+      pullOptions,
+    );
+    pullChart.render();
+
+    // Docker
+    const dockerOptions = {
+      series: [
+        {
+          name: 'Image Size',
+          data: json.docker_images.map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+      ],
+      chart: {
+        height: 350,
+        type: 'line',
+        zoom: {
+          enabled: false,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'Docker Image Size',
+        align: 'left',
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+      yaxis: {
+        labels: {
+          formatter: (val) => `${val.toFixed(2)}GB`,
+        },
+        title: {
+          text: 'Size',
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: function (val) {
+            return `${val.toFixed(2)}GB`;
+          },
+        },
+      },
+    };
+
+    const dockerChart = new ApexCharts(
+      document.querySelector('#docker-chart'),
+      dockerOptions,
+    );
+    dockerChart.render();
   });

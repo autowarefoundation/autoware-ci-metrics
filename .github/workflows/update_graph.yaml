@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests matplotlib
+          pip install requests numpy python-dxf
 
       - name: Restore cache
         uses: actions/cache@v2
@@ -37,7 +37,7 @@ jobs:
       - name: Execute script
         run: |
           mkdir -p cache
-          python scripts/awf_autoware_build_main_self_hosted.py --github_token ${{ github.token }}
+          python scripts/awf_autoware_build_main_self_hosted.py --github_token ${{ github.token }} --github_actor ${{ github.actor }}
           cp github_action_data.json public/
 
       - name: Upload Pages artifact
