@@ -109,9 +109,6 @@ for run in workflow_runs:
         print(f"Log for run_id={run['id']} cannot be fetched. {e}")
         continue
 
-    if run["id"] != 8004157978:
-        continue
-
     if BUILD_LOG_ID in logs.keys():
         build_log_text = logs[BUILD_LOG_ID]
     elif BUILD_LOG_ID_2 in logs.keys():
