@@ -72,7 +72,7 @@ workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
 # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
 workflow_runs = workflow_api.get_workflow_duration_list(
-    REPO, BUILD_WORKFLOW_ID, accurate=False
+    REPO, BUILD_WORKFLOW_ID, accurate=True
 )
 
 ####################
