@@ -108,6 +108,7 @@ for run in workflow_runs:
         print(f"Log for run_id={run['id']} cannot be fetched. {e}")
         continue
 
+    print(f"log keys: {logs.keys()}")
     build_log_text = ""
     for log_id in BUILD_LOG_IDS:
         if log_id in logs.keys():
