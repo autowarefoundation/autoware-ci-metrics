@@ -67,6 +67,8 @@ class GitHubWorkflowAPI:
 
             run["duration"] = 0
             for job in jobs:
+                if "completed_at" not in job or "started_at" not in job:
+                    continue
                 completed_at = datetime.strptime(job["completed_at"], self.time_format)
                 started_at = datetime.strptime(job["started_at"], self.time_format)
                 run["duration"] += (completed_at - started_at).total_seconds()
