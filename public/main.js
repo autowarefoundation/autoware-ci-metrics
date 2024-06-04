@@ -14,7 +14,7 @@ fetch('github_action_data.json')
         height: 500,
         type: 'donut',
         zoom: {
-          enabled: false,
+          enabled: true,
         },
         selection: {
           enabled: true,
@@ -84,7 +84,7 @@ fetch('github_action_data.json')
         height: 350,
         type: 'line',
         zoom: {
-          enabled: false,
+          enabled: true,
         },
         selection: {
           enabled: true,
@@ -169,7 +169,7 @@ fetch('github_action_data.json')
         height: 350,
         type: 'line',
         zoom: {
-          enabled: false,
+          enabled: true,
         },
         selection: {
           enabled: true,
@@ -269,7 +269,7 @@ fetch('github_action_data.json')
         height: 350,
         type: 'line',
         zoom: {
-          enabled: false,
+          enabled: true,
         },
         selection: {
           enabled: true,
@@ -318,7 +318,7 @@ fetch('github_action_data.json')
         height: 350,
         type: 'boxPlot',
         zoom: {
-          enabled: false,
+          enabled: true,
         },
       },
       dataLabels: {
@@ -359,7 +359,7 @@ fetch('github_action_data.json')
         height: 350,
         type: 'line',
         zoom: {
-          enabled: false,
+          enabled: true,
         },
       },
       dataLabels: {
