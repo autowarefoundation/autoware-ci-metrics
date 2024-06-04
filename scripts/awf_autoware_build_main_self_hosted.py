@@ -14,11 +14,10 @@ REPO = "autowarefoundation/autoware"
 SPELL_REPO = "autowarefoundation/autoware.universe"
 
 BUILD_WORKFLOW_ID = "build-main-self-hosted.yaml"
-BUILD_LOG_ID = "build-main-self-hosted/9_Build.txt"
-# after merging this pull-request, the log ID is changed
-# PR: https://github.com/autowarefoundation/autoware/pull/4191
-BUILD_LOG_ID_2 = "build-main-self-hosted (cuda)/6_Build 'autoware-universe'.txt"
-
+BUILD_LOG_IDS = [
+    "build-main-self-hosted/9_Build.txt",
+    "build-main-self-hosted (cuda)/6_Build 'autoware-universe'.txt",
+]
 SPELL_WORKFLOW_ID = "spell-check-all.yaml"
 SPELL_LOG_ID = "spell-check-all/3_Run spell-check.txt"
 
@@ -109,12 +108,16 @@ for run in workflow_runs:
         print(f"Log for run_id={run['id']} cannot be fetched. {e}")
         continue
 
-    if BUILD_LOG_ID in logs.keys():
-        build_log_text = logs[BUILD_LOG_ID]
-    elif BUILD_LOG_ID_2 in logs.keys():
-        build_log_text = logs[BUILD_LOG_ID_2]
-    analyzer = ColconLogAnalyzer(build_log_text)
+    build_log_text = ""
+    for log_id in BUILD_LOG_IDS:
+        if log_id in logs.keys():
+            build_log_text = logs[log_id]
+            break
+    if build_log_text == "":
+        print(f"Log for run_id={run['id']} not found.")
+        continue
 
+    analyzer = ColconLogAnalyzer(build_log_text)
     package_duration_list = analyzer.get_build_duration_list()
 
     # Sort by duration
