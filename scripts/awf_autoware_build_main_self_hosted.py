@@ -13,10 +13,11 @@ import json
 REPO = "autowarefoundation/autoware"
 SPELL_REPO = "autowarefoundation/autoware.universe"
 
-BUILD_WORKFLOW_ID = "build-main-self-hosted.yaml"
+BUILD_WORKFLOW_ID = "build-main.yaml"
 BUILD_LOG_IDS = [
-    "build-main-self-hosted/9_Build.txt",
-    "build-main-self-hosted (cuda)/6_Build 'autoware-universe'.txt",
+    "build-main/9_Build.txt",
+    "build-main (cuda)/5_Build 'autoware-universe'.txt",
+    "build-main (cuda)/7_Build 'autoware-universe'.txt",
 ]
 SPELL_WORKFLOW_ID = "spell-check-all.yaml"
 SPELL_LOG_ID = "spell-check-all/3_Run spell-check.txt"
