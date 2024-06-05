@@ -156,18 +156,27 @@ fetch('github_action_data.json')
     };
 
     // Build duration chart
+    no_cuda_data = json.workflow_time.filter((data) => data.jobs.includes('build-main (no-cuda)'));
+    cuda_data = json.workflow_time.filter((data) => data.jobs.includes('build-main (cuda)'));
     const buildDurationOptions = {
       series: [
         {
-          name: 'Build duration',
-          data: json.workflow_time.map((data) => {
+          name: 'build-main (no-cuda))',
+          data: no_cuda_data.map((data) => {
+            return [new Date(data.date), data.duration];
+          }),
+        },
+        {
+          name: 'build-main (cuda))',
+          data: cuda_data.map((data) => {
             return [new Date(data.date), data.duration];
           }),
         },
       ],
       chart: {
-        height: 350,
-        type: 'line',
+        height: 500,
+        type: 'area',
+        stacked: true,
         zoom: {
           enabled: true,
         },
