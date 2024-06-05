@@ -156,8 +156,8 @@ fetch('github_action_data.json')
     };
 
     // Build duration chart
-    no_cuda_data = json.workflow_time.filter((data) => data.jobs.includes('build-main (no-cuda)'));
-    cuda_data = json.workflow_time.filter((data) => data.jobs.includes('build-main (cuda)'));
+    no_cuda_data = json.workflow_time.filter((data) => 'build-main (no-cuda)' in data.jobs);
+    cuda_data = json.workflow_time.filter((data) => 'build-main (cuda)' in data.jobs);
     const buildDurationOptions = {
       series: [
         {
