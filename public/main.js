@@ -1,8 +1,10 @@
 fetch('github_action_data.json')
   .then((res) => res.json())
   .then((json) => {
+    const validatedWorkflowTime = json.workflow_time.filter(
+      (data) => 'build-main (no-cuda)' in data.jobs && 'build-main (cuda)' in data.jobs);
     const packageList = new Set(
-      json.workflow_time.flatMap((data) => Object.keys(data.details ?? {})),
+      validatedWorkflowTime.flatMap((data) => Object.keys(data.details ?? {})),
     );
     const mmss = (seconds) =>
       `${Math.ceil(seconds / 60)}m${(seconds % 60).toFixed(0)}s`;
@@ -53,7 +55,7 @@ fetch('github_action_data.json')
 
     // Handler
     const showAllPackageDuration = (buildIndex) => {
-      const packageDetails = json.workflow_time[buildIndex].details ?? {};
+      const packageDetails = validatedWorkflowTime[buildIndex].details ?? {};
       const packageLabels = Object.keys(packageDetails).sort(
         (a, b) => packageDetails[b] - packageDetails[a],
       );
@@ -142,7 +144,7 @@ fetch('github_action_data.json')
       const packageSelector = document.querySelector('#package-select');
       packageSelector.value = packageName;
 
-      const packageData = json.workflow_time.map((data) => [
+      const packageData = validatedWorkflowTime.map((data) => [
         new Date(data.date),
         data.details?.[packageName] ?? null,
       ]);
@@ -156,25 +158,23 @@ fetch('github_action_data.json')
     };
 
     // Build duration chart
-    no_cuda_data = json.workflow_time.filter((data) => 'build-main (no-cuda)' in data.jobs);
-    cuda_data = json.workflow_time.filter((data) => 'build-main (cuda)' in data.jobs);
     const buildDurationOptions = {
       series: [
         {
-          name: 'build-main (no-cuda))',
-          data: no_cuda_data.map((data) => {
-            return [new Date(data.date), data.duration];
+          name: 'build-main (no-cuda)',
+          data: validatedWorkflowTime.map((data) => {
+            return [new Date(data.date), data.jobs['build-main (no-cuda)'] / 3600.0];
           }),
         },
         {
-          name: 'build-main (cuda))',
-          data: cuda_data.map((data) => {
-            return [new Date(data.date), data.duration];
+          name: 'build-main (cuda)',
+          data: validatedWorkflowTime.map((data) => {
+            return [new Date(data.date), data.jobs['build-main (cuda)'] / 3600.0];
           }),
         },
       ],
       chart: {
-        height: 500,
+        height: 350,
         type: 'area',
         stacked: true,
         zoom: {
@@ -236,7 +236,7 @@ fetch('github_action_data.json')
 
     // Build selector
     const buildSelector = document.querySelector('#build-select');
-    json.workflow_time.forEach((data, index) => {
+    validatedWorkflowTime.forEach((data, index) => {
       if (data.details !== null) {
         const option = document.createElement('option');
         option.value = index;

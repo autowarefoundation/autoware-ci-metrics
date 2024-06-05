@@ -1,6 +1,6 @@
 # GitHub Workflow API wrapper
-from datetime import datetime
 import math
+from datetime import datetime
 
 import requests
 
@@ -43,23 +43,21 @@ class GitHubWorkflowAPI:
             ).json()
             workflow_runs = page_response["workflow_runs"] + workflow_runs
 
+        workflow_runs = [
+            run
+            for run in workflow_runs
+            if run["conclusion"] == "success"
+            and isinstance(run["created_at"], str)
+            and isinstance(run["updated_at"], str)
+        ]
+
         for run in workflow_runs:
-            if run["conclusion"] != "success":
-                print(f"Skipping {run['id']} due to {run['conclusion']}")
-                workflow_runs.remove(run)
-                continue
-        for run in workflow_runs:
-            try:
-                run["created_at"] = datetime.strptime(
-                    run["created_at"], self.time_format
-                )
-                run["updated_at"] = datetime.strptime(
-                    run["updated_at"], self.time_format
-                )
-            except TypeError:
-                print(f"Error in parsing {run}")
-                workflow_runs.remove(run)
-                continue
+            run["created_at"] = datetime.strptime(
+                run["created_at"], self.time_format
+            )
+            run["updated_at"] = datetime.strptime(
+                run["updated_at"], self.time_format
+            )
 
         # Sorting by created_at (oldest to newest, utility function)
         workflow_runs = sorted(workflow_runs, key=lambda k: k["created_at"])
@@ -93,10 +91,16 @@ class GitHubWorkflowAPI:
                 except TypeError:
                     print(f"Error in parsing {job}")
                     continue
-                run["jobs"][job["name"]] = (completed_at - started_at).total_seconds()
+                run["jobs"][job["name"]] = (
+                    completed_at - started_at
+                ).total_seconds()
                 run["duration"] += run["jobs"][job["name"]]
-            print(f"{index+1}/{len(workflow_runs)}: {math.floor(run['duration']/60)}m {math.floor(run['duration']%60)}s")
-            print(run["jobs"])
+            print(
+                f"{index+1}/{len(workflow_runs)}: {run['created_at']} "
+                f"{math.floor(run['duration']/60)}m "
+                f"{math.floor(run['duration']%60)}s "
+                f"{run['jobs']} {run['conclusion']}"
+            )
 
         return workflow_runs
 
