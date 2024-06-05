@@ -11,20 +11,14 @@ import json
 
 # Constant
 REPO = "autowarefoundation/autoware"
-SPELL_REPO = "autowarefoundation/autoware.universe"
-
-BUILD_WORKFLOW_ID = "build-main-self-hosted.yaml"
-BUILD_LOG_ID = "build-main-self-hosted/9_Build.txt"
-# after merging this pull-request, the log ID is changed
-# PR: https://github.com/autowarefoundation/autoware/pull/4191
-BUILD_LOG_ID_2 = "build-main-self-hosted (cuda)/6_Build 'autoware-universe'.txt"
-
-SPELL_WORKFLOW_ID = "spell-check-all.yaml"
-SPELL_LOG_ID = "spell-check-all/3_Run spell-check.txt"
-
+BUILD_WORKFLOW_ID = "build-main.yaml"
+BUILD_LOG_IDS = [
+    "build-main/9_Build.txt",
+    "build-main (cuda)/5_Build 'autoware-universe'.txt",
+    "build-main (cuda)/7_Build 'autoware-universe'.txt",
+]
 DOCKER_ORGS = "autowarefoundation"
-DOCKER_IMAGE = "autoware-universe"
-
+DOCKER_IMAGE = "autoware"
 CACHE_DIR = "./cache/"
 
 
@@ -81,7 +75,7 @@ workflow_runs = workflow_api.get_workflow_duration_list(
 
 
 # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
-workflow_runs = [item for item in workflow_runs if item["duration"] < 3600 * 100]
+workflow_runs = [item for item in workflow_runs if 60 < item["duration"] < 3600 * 100]
 
 ####################
 # Log analysis
@@ -109,12 +103,16 @@ for run in workflow_runs:
         print(f"Log for run_id={run['id']} cannot be fetched. {e}")
         continue
 
-    if BUILD_LOG_ID in logs.keys():
-        build_log_text = logs[BUILD_LOG_ID]
-    elif BUILD_LOG_ID_2 in logs.keys():
-        build_log_text = logs[BUILD_LOG_ID_2]
-    analyzer = ColconLogAnalyzer(build_log_text)
+    build_log_text = ""
+    for log_id in BUILD_LOG_IDS:
+        if log_id in logs.keys():
+            build_log_text = logs[log_id]
+            break
+    if build_log_text == "":
+        print(f"Log for run_id={run['id']} not found.")
+        continue
 
+    analyzer = ColconLogAnalyzer(build_log_text)
     package_duration_list = analyzer.get_build_duration_list()
 
     # Sort by duration
@@ -131,85 +129,6 @@ for run in workflow_runs:
         "date": run["created_at"],
         "duration": package_duration_dict,
     }
-
-####################
-# Spell check analysis
-####################
-
-spellcheck_runs = workflow_api.get_workflow_duration_list(
-    SPELL_REPO, SPELL_WORKFLOW_ID, accurate=False
-)
-
-spellcheck_re = re.compile(r"##\[error\](\d+) spelling issues found")
-spell_checks = []
-
-for run in spellcheck_runs:
-    # older than 90 days
-    older_days = (datetime.now() - run["created_at"]).days
-
-    try:
-        logs = try_cache(
-            f"{SPELL_REPO}-{run['id']}",
-            lambda: workflow_api.get_workflow_logs(SPELL_REPO, run["id"])
-            if older_days < 90
-            else None,
-        )
-    except Exception as e:
-        print(f"Log for run_id={run['id']} cannot be fetched. {e}")
-        continue
-
-    spell_log_text = logs[SPELL_LOG_ID]
-    spellcheck_result = spellcheck_re.search(spell_log_text)
-
-    if spellcheck_result is not None:
-        spellcheck_count = int(spellcheck_result.group(1))
-        print(
-            f"Spell check error found in run_id={run['id']}, count={spellcheck_count}"
-        )
-
-        spell_checks.append(
-            {
-                "run_id": run["id"],
-                "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
-                "count": spellcheck_count,
-            }
-        )
-
-####################
-# Pull request analysis
-####################
-
-pull_requests_api = github_api.GithubPullRequestAPI(github_token)
-all_pr = pull_requests_api.get_all_pull_requests(SPELL_REPO)
-
-# Calculate average time to be closed
-pr_per_month = {}
-five_close_per_month = {}
-
-closed_pr = [pr for pr in all_pr if pr["state"] == "closed"]
-print("Total closed PR:", len(all_pr))
-average_time_to_be_closed = sum(
-    [(pr["closed_at"] - pr["created_at"]).total_seconds() for pr in closed_pr]
-) / len(closed_pr)
-
-print("Average time to be closed:", average_time_to_be_closed)
-
-for pr in closed_pr:
-    month = pr["closed_at"].strftime("%Y/%m")
-    if month not in pr_per_month:
-        pr_per_month[month] = []
-    pr_per_month[month].append(pr)
-
-for month in pr_per_month.keys():
-    print("PR: ", month, len(pr_per_month[month]))
-    closed_time = [
-        (pr["closed_at"] - pr["created_at"]).total_seconds()
-        for pr in pr_per_month[month]
-    ]
-    five_close_per_month[month] = np.quantile(
-        closed_time, [0, 0.25, 0.5, 0.75, 1]
-    ).tolist()
-    print("Avg: ", closed_time)
 
 ####################
 # Docker image analysis
@@ -231,10 +150,10 @@ for package in packages:
     if tag_count == 0:
         continue
     tag = package["metadata"]["container"]["tags"][0]
-    if not tag.endswith("amd64") or "cuda" in tag or "prebuilt" not in tag:
+    if not tag.endswith("amd64") or "cuda" not in tag or "prebuilt" not in tag:
         continue
 
-    print(tag)
+    print(f"Fetching manifest for {tag}")
     manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
     if manifest is None:
         print(f"Failed to fetch manifest for {tag}")
@@ -242,7 +161,6 @@ for package in packages:
     metadata = json.loads(
         (manifest["linux/amd64"] if type(manifest) is dict else manifest)
     )
-    # print(metadata)
 
     total_size = sum([layer["size"] for layer in metadata["layers"]])
     docker_images.append(
@@ -260,12 +178,6 @@ for package in packages:
 
 json_data = {
     "workflow_time": [],
-    "spell_checks": spell_checks,
-    "pulls": {
-        "total": len(all_pr),
-        "closed": len(closed_pr),
-        "closed_per_month": five_close_per_month,
-    },
     "docker_images": docker_images,
 }
 
@@ -282,7 +194,5 @@ for run in workflow_runs:
     )
 
 # Save the data to a JSON file
-
-
 with open("github_action_data.json", "w") as jsonfile:
     json.dump(json_data, jsonfile, indent=4)

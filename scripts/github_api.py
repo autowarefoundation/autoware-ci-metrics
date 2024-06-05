@@ -18,14 +18,12 @@ class GitHubWorkflowAPI:
         endpoint = (
             f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
         )
+        print(f"Fetching workflow runs from {endpoint}")
 
         first_page_response = requests.get(
             endpoint, headers=self.headers, params=payloads
         ).json()
-
         workflow_runs = first_page_response["workflow_runs"]
-
-        print(f"Total count: {first_page_response['total_count']}")
 
         # Reuse first_page_response to get the total count of workflow runs
         total_count = first_page_response["total_count"]
@@ -45,8 +43,13 @@ class GitHubWorkflowAPI:
 
         # Time format conversion (utility function)
         for run in workflow_runs:
-            run["created_at"] = datetime.strptime(run["created_at"], self.time_format)
-            run["updated_at"] = datetime.strptime(run["updated_at"], self.time_format)
+            try:
+                run["created_at"] = datetime.strptime(run["created_at"], self.time_format)
+                run["updated_at"] = datetime.strptime(run["updated_at"], self.time_format)
+            except TypeError:
+                print(f"Error in parsing {run}")
+                workflow_runs.remove(run)
+                continue
 
         # Sorting by created_at (oldest to newest, utility function)
         workflow_runs = sorted(workflow_runs, key=lambda k: k["created_at"])
@@ -62,14 +65,19 @@ class GitHubWorkflowAPI:
             return workflow_runs
 
         # By calling jobs API for each workflow run
-        for run in workflow_runs:
+        for index, run in enumerate(workflow_runs):
             jobs = requests.get(run["jobs_url"], headers=self.headers).json()["jobs"]
 
             run["duration"] = 0
             for job in jobs:
-                completed_at = datetime.strptime(job["completed_at"], self.time_format)
-                started_at = datetime.strptime(job["started_at"], self.time_format)
+                try:
+                    completed_at = datetime.strptime(job["completed_at"], self.time_format)
+                    started_at = datetime.strptime(job["started_at"], self.time_format)
+                except TypeError:
+                    print(f"Error in parsing {job}")
+                    continue
                 run["duration"] += (completed_at - started_at).total_seconds()
+            print(f"{index+1}/{len(workflow_runs)}: {run['duration']} seconds")
 
         return workflow_runs
 
@@ -146,8 +154,8 @@ class GithubPackagesAPI:
         endpoint = (
             f"https://api.github.com/orgs/{org}/packages/container/{pkg}/versions"
         )
+        print(f"Fetching packages from {endpoint}")
         response = requests.get(endpoint, headers=self.headers, params=payloads).json()
-
         packages = response
 
         while len(response) == payloads["per_page"]:
@@ -159,11 +167,15 @@ class GithubPackagesAPI:
             packages += response
 
         for package in packages:
-            package["created_at"] = datetime.strptime(
-                package["created_at"], self.time_format
-            )
-            package["updated_at"] = datetime.strptime(
-                package["updated_at"], self.time_format
-            )
+            try:
+                package["created_at"] = datetime.strptime(
+                    package["created_at"], self.time_format
+                )
+                package["updated_at"] = datetime.strptime(
+                    package["updated_at"], self.time_format
+                )
+            except TypeError:
+                print(f"Error in parsing {package}")
+                continue
 
         return packages
