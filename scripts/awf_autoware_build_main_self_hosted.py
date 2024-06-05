@@ -89,10 +89,6 @@ for run in workflow_runs:
     if (datetime.now() - run["created_at"]).days > 90:
         continue
 
-    # skip
-    if run["conclusion"] != "success":
-        continue
-
     try:
         logs = try_cache(
             f"{REPO}-{run['id']}",
