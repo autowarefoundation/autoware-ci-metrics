@@ -189,6 +189,7 @@ for run in workflow_runs:
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
             "duration": run["duration"] / 3600,
+            "jobs": run["jobs"],
             "details": package_duration_logs[run["id"]]["duration"]
             if run["id"] in package_duration_logs
             else None,
