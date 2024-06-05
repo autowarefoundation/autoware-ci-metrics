@@ -1,5 +1,6 @@
 # GitHub Workflow API wrapper
 from datetime import datetime
+import math
 
 import requests
 
@@ -79,6 +80,7 @@ class GitHubWorkflowAPI:
                 "jobs"
             ]
 
+            run["jobs"] = {}
             run["duration"] = 0
             for job in jobs:
                 try:
@@ -91,8 +93,10 @@ class GitHubWorkflowAPI:
                 except TypeError:
                     print(f"Error in parsing {job}")
                     continue
-                run["duration"] += (completed_at - started_at).total_seconds()
-            print(f"{index+1}/{len(workflow_runs)}: {run['duration']} seconds")
+                run["jobs"][job["name"]] = (completed_at - started_at).total_seconds()
+                run["duration"] += run["jobs"][job["name"]]
+            print(f"{index+1}/{len(workflow_runs)}: {math.floor(run['duration']/60)}m {math.floor(run['duration']%60)}s")
+            print(run["jobs"])
 
         return workflow_runs
 
