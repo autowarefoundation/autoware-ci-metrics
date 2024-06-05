@@ -11,20 +11,14 @@ import json
 
 # Constant
 REPO = "autowarefoundation/autoware"
-SPELL_REPO = "autowarefoundation/autoware.universe"
-
 BUILD_WORKFLOW_ID = "build-main.yaml"
 BUILD_LOG_IDS = [
     "build-main/9_Build.txt",
     "build-main (cuda)/5_Build 'autoware-universe'.txt",
     "build-main (cuda)/7_Build 'autoware-universe'.txt",
 ]
-SPELL_WORKFLOW_ID = "spell-check-all.yaml"
-SPELL_LOG_ID = "spell-check-all/3_Run spell-check.txt"
-
 DOCKER_ORGS = "autowarefoundation"
 DOCKER_IMAGE = "autoware-universe"
-
 CACHE_DIR = "./cache/"
 
 
@@ -81,7 +75,7 @@ workflow_runs = workflow_api.get_workflow_duration_list(
 
 
 # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
-workflow_runs = [item for item in workflow_runs if item["duration"] < 3600 * 100]
+workflow_runs = [item for item in workflow_runs if 60 < item["duration"] < 3600 * 100]
 
 ####################
 # Log analysis
@@ -136,85 +130,6 @@ for run in workflow_runs:
         "date": run["created_at"],
         "duration": package_duration_dict,
     }
-
-####################
-# Spell check analysis
-####################
-
-spellcheck_runs = workflow_api.get_workflow_duration_list(
-    SPELL_REPO, SPELL_WORKFLOW_ID, accurate=False
-)
-
-spellcheck_re = re.compile(r"##\[error\](\d+) spelling issues found")
-spell_checks = []
-
-for run in spellcheck_runs:
-    # older than 90 days
-    older_days = (datetime.now() - run["created_at"]).days
-
-    try:
-        logs = try_cache(
-            f"{SPELL_REPO}-{run['id']}",
-            lambda: workflow_api.get_workflow_logs(SPELL_REPO, run["id"])
-            if older_days < 90
-            else None,
-        )
-    except Exception as e:
-        print(f"Log for run_id={run['id']} cannot be fetched. {e}")
-        continue
-
-    spell_log_text = logs[SPELL_LOG_ID]
-    spellcheck_result = spellcheck_re.search(spell_log_text)
-
-    if spellcheck_result is not None:
-        spellcheck_count = int(spellcheck_result.group(1))
-        print(
-            f"Spell check error found in run_id={run['id']}, count={spellcheck_count}"
-        )
-
-        spell_checks.append(
-            {
-                "run_id": run["id"],
-                "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
-                "count": spellcheck_count,
-            }
-        )
-
-####################
-# Pull request analysis
-####################
-
-pull_requests_api = github_api.GithubPullRequestAPI(github_token)
-all_pr = pull_requests_api.get_all_pull_requests(SPELL_REPO)
-
-# Calculate average time to be closed
-pr_per_month = {}
-five_close_per_month = {}
-
-closed_pr = [pr for pr in all_pr if pr["state"] == "closed"]
-print("Total closed PR:", len(all_pr))
-average_time_to_be_closed = sum(
-    [(pr["closed_at"] - pr["created_at"]).total_seconds() for pr in closed_pr]
-) / len(closed_pr)
-
-print("Average time to be closed:", average_time_to_be_closed)
-
-for pr in closed_pr:
-    month = pr["closed_at"].strftime("%Y/%m")
-    if month not in pr_per_month:
-        pr_per_month[month] = []
-    pr_per_month[month].append(pr)
-
-for month in pr_per_month.keys():
-    print("PR: ", month, len(pr_per_month[month]))
-    closed_time = [
-        (pr["closed_at"] - pr["created_at"]).total_seconds()
-        for pr in pr_per_month[month]
-    ]
-    five_close_per_month[month] = np.quantile(
-        closed_time, [0, 0.25, 0.5, 0.75, 1]
-    ).tolist()
-    print("Avg: ", closed_time)
 
 ####################
 # Docker image analysis
