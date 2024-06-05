@@ -42,7 +42,11 @@ class GitHubWorkflowAPI:
             ).json()
             workflow_runs = page_response["workflow_runs"] + workflow_runs
 
-        # Time format conversion (utility function)
+        for run in workflow_runs:
+            if run["conclusion"] != "success":
+                print(f"Skipping {run['id']} due to {run['conclusion']}")
+                workflow_runs.remove(run)
+                continue
         for run in workflow_runs:
             try:
                 run["created_at"] = datetime.strptime(
