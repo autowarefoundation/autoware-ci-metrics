@@ -1,8 +1,10 @@
 fetch('github_action_data.json')
   .then((res) => res.json())
   .then((json) => {
-    const validatedWorkflowTime = json.workflow_time.filter(
+    const validatedWorkflowTime = json.workflow_time["build-main"].filter(
       (data) => 'build-main (no-cuda)' in data.jobs && 'build-main (cuda)' in data.jobs);
+    const validatedWorkflowTimeSelfHosted = json.workflow_time["build-main-self-hosted"].filter(
+      (data) => 'build-main-self-hosted (no-cuda)' in data.jobs && 'build-main-self-hosted (cuda)' in data.jobs);
     const packageList = new Set(
       validatedWorkflowTime.flatMap((data) => Object.keys(data.details ?? {})),
     );
@@ -172,11 +174,22 @@ fetch('github_action_data.json')
             return [new Date(data.date), data.jobs['build-main (cuda)'] / 3600.0];
           }),
         },
+        {
+          name: 'build-main-self-hosted (no-cuda)',
+          data: validatedWorkflowTimeSelfHosted.map((data) => {
+            return [new Date(data.date), data.jobs['build-main-self-hosted (no-cuda)'] / 3600.0];
+          }),
+        },
+        {
+          name: 'build-main-self-hosted (cuda)',
+          data: validatedWorkflowTimeSelfHosted.map((data) => {
+            return [new Date(data.date), data.jobs['build-main-self-hosted (cuda)'] / 3600.0];
+          }),
+        },
       ],
       chart: {
         height: 350,
-        type: 'area',
-        stacked: true,
+        type: 'line',
         zoom: {
           enabled: true,
         },
@@ -269,20 +282,38 @@ fetch('github_action_data.json')
     const dockerOptions = {
       series: [
         {
-          name: 'Image size (prebuilt)',
-          data: json.docker_images['prebuilt'].map((data) => {
+          name: 'prebuilt-cuda-amd64',
+          data: json.docker_images['prebuilt-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'Image size (devel)',
-          data: json.docker_images['devel'].map((data) => {
+          name: 'devel-cuda-amd64',
+          data: json.docker_images['devel-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'Image size (runtime)',
-          data: json.docker_images['runtime'].map((data) => {
+          name: 'runtime-cuda-amd64',
+          data: json.docker_images['runtime-cuda-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'prebuilt-cuda-arm64',
+          data: json.docker_images['prebuilt-cuda-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'devel-cuda-arm64',
+          data: json.docker_images['devel-cuda-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'runtime-cuda-arm64',
+          data: json.docker_images['runtime-cuda-arm64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
