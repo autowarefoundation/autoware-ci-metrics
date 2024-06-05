@@ -260,8 +260,20 @@ fetch('github_action_data.json')
     const dockerOptions = {
       series: [
         {
-          name: 'Image Size',
-          data: json.docker_images.map((data) => {
+          name: 'Image size (prebuilt)',
+          data: json.docker_images['prebuilt'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'Image size (devel)',
+          data: json.docker_images['devel'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'Image size (runtime)',
+          data: json.docker_images['runtime'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },

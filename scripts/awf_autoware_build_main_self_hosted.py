@@ -141,7 +141,7 @@ def auth(dxf, response):
     dxf.authenticate(github_actor, github_token, response=response)
 
 
-docker_images = []
+docker_images = {"prebuilt": [], "devel": [], "runtime": []}
 
 dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
 for package in packages:
@@ -149,7 +149,14 @@ for package in packages:
     if tag_count == 0:
         continue
     tag = package["metadata"]["container"]["tags"][0]
-    if not tag.endswith("amd64") or "cuda" not in tag or "prebuilt" not in tag:
+    if not tag.endswith("amd64") or "cuda" not in tag:
+        continue
+    docker_image = ""
+    for key in docker_images.keys():
+        if key in tag:
+            docker_image = key
+            break
+    if docker_image == "":
         continue
 
     print(f"Fetching manifest for {tag}")
@@ -162,7 +169,7 @@ for package in packages:
     )
 
     total_size = sum([layer["size"] for layer in metadata["layers"]])
-    docker_images.append(
+    docker_images[docker_image].append(
         {
             "size": total_size,
             "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
