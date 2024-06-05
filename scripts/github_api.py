@@ -18,6 +18,7 @@ class GitHubWorkflowAPI:
         endpoint = (
             f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
         )
+        print(f"Fetching workflow runs from {endpoint}")
 
         first_page_response = requests.get(
             endpoint, headers=self.headers, params=payloads
@@ -45,8 +46,13 @@ class GitHubWorkflowAPI:
 
         # Time format conversion (utility function)
         for run in workflow_runs:
-            run["created_at"] = datetime.strptime(run["created_at"], self.time_format)
-            run["updated_at"] = datetime.strptime(run["updated_at"], self.time_format)
+            try:
+                run["created_at"] = datetime.strptime(run["created_at"], self.time_format)
+                run["updated_at"] = datetime.strptime(run["updated_at"], self.time_format)
+            except TypeError:
+                print(f"Error in parsing {run}")
+                workflow_runs.remove(run)
+                continue
 
         # Sorting by created_at (oldest to newest, utility function)
         workflow_runs = sorted(workflow_runs, key=lambda k: k["created_at"])
@@ -62,16 +68,19 @@ class GitHubWorkflowAPI:
             return workflow_runs
 
         # By calling jobs API for each workflow run
-        for run in workflow_runs:
+        for index, run in enumerate(workflow_runs):
             jobs = requests.get(run["jobs_url"], headers=self.headers).json()["jobs"]
 
             run["duration"] = 0
             for job in jobs:
-                if "completed_at" not in job or "started_at" not in job:
+                try:
+                    completed_at = datetime.strptime(job["completed_at"], self.time_format)
+                    started_at = datetime.strptime(job["started_at"], self.time_format)
+                except TypeError:
+                    print(f"Error in parsing {job}")
                     continue
-                completed_at = datetime.strptime(job["completed_at"], self.time_format)
-                started_at = datetime.strptime(job["started_at"], self.time_format)
                 run["duration"] += (completed_at - started_at).total_seconds()
+            print(f"{index+1}/{len(workflow_runs)}: {run['duration']} seconds")
 
         return workflow_runs
 
