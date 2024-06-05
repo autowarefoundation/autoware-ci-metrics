@@ -161,15 +161,15 @@ fetch('github_action_data.json')
     const buildDurationOptions = {
       series: [
         {
-          name: 'build-main (no-cuda))',
+          name: 'build-main (no-cuda)',
           data: no_cuda_data.map((data) => {
-            return [new Date(data.date), data.duration];
+            return [new Date(data.date), data.jobs['build-main (no-cuda)'] / 3600.0];
           }),
         },
         {
-          name: 'build-main (cuda))',
+          name: 'build-main (cuda)',
           data: cuda_data.map((data) => {
-            return [new Date(data.date), data.duration];
+            return [new Date(data.date), data.jobs['build-main (cuda)'] / 3600.0];
           }),
         },
       ],
