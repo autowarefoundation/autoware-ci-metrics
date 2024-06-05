@@ -9,6 +9,7 @@ from dxf import DXF
 # Constant
 REPO = "autowarefoundation/autoware"
 BUILD_WORKFLOW_ID = "build-main.yaml"
+BUILD_WORKFLOW_SELF_HOSTED_ID = "build-main-self-hosted.yaml"
 BUILD_LOG_IDS = [
     "build-main/9_Build.txt",
     "build-main (cuda)/5_Build 'autoware-universe'.txt",
@@ -65,6 +66,9 @@ workflow_api = github_api.GitHubWorkflowAPI(github_token)
 workflow_runs = workflow_api.get_workflow_duration_list(
     REPO, BUILD_WORKFLOW_ID, accurate=True
 )
+workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
+    REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, accurate=True
+)
 
 ####################
 # Build time analysis
@@ -74,6 +78,11 @@ workflow_runs = workflow_api.get_workflow_duration_list(
 # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
 workflow_runs = [
     item for item in workflow_runs if 60 < item["duration"] < 3600 * 100
+]
+workflow_runs_self_hosted = [
+    item
+    for item in workflow_runs_self_hosted
+    if 60 < item["duration"] < 3600 * 100
 ]
 
 ####################
@@ -137,7 +146,14 @@ def auth(dxf, response):
     dxf.authenticate(github_actor, github_token, response=response)
 
 
-docker_images = {"prebuilt": [], "devel": [], "runtime": []}
+docker_images = {
+    "prebuilt-cuda-amd64": [],
+    "devel-cuda-amd64": [],
+    "runtime-cuda-amd64": [],
+    "prebuilt-cuda-arm64": [],
+    "devel-cuda-arm64": [],
+    "runtime-cuda-arm64": [],
+}
 
 dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
 for package in packages:
@@ -145,12 +161,16 @@ for package in packages:
     if tag_count == 0:
         continue
     tag = package["metadata"]["container"]["tags"][0]
-    if not tag.endswith("amd64") or "cuda" not in tag:
+    if (
+        not tag.endswith("amd64") and not tag.endswith("arm64")
+    ) or "cuda" not in tag:
         continue
     docker_image = ""
-    for key in docker_images.keys():
+    for key in ("prebuilt", "devel", "runtime"):
         if key in tag:
-            docker_image = key
+            docker_image = (
+                key + "-cuda-" + ("amd64" if tag.endswith("amd64") else "arm64")
+            )
             break
     if docker_image == "":
         continue
@@ -179,12 +199,24 @@ for package in packages:
 ####################
 
 json_data = {
-    "workflow_time": [],
+    "workflow_time": {"build-main": [], "build-main-self-hosted": []},
     "docker_images": docker_images,
 }
 
 for run in workflow_runs:
-    json_data["workflow_time"].append(
+    json_data["workflow_time"]["build-main"].append(
+        {
+            "run_id": run["id"],
+            "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
+            "duration": run["duration"] / 3600,
+            "jobs": run["jobs"],
+            "details": package_duration_logs[run["id"]]["duration"]
+            if run["id"] in package_duration_logs
+            else None,
+        }
+    )
+for run in workflow_runs_self_hosted:
+    json_data["workflow_time"]["build-main-self-hosted"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
