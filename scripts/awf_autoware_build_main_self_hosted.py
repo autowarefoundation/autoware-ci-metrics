@@ -1,10 +1,8 @@
 import argparse
 import json
-import re
 from datetime import datetime
 
 import github_api
-import numpy as np
 from colcon_log_analyzer import ColconLogAnalyzer
 from dxf import DXF
 
