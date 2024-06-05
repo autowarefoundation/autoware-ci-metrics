@@ -161,7 +161,6 @@ for package in packages:
     metadata = json.loads(
         (manifest["linux/amd64"] if type(manifest) is dict else manifest)
     )
-    # print(metadata)
 
     total_size = sum([layer["size"] for layer in metadata["layers"]])
     docker_images.append(
@@ -179,11 +178,6 @@ for package in packages:
 
 json_data = {
     "workflow_time": [],
-    "pulls": {
-        "total": len(all_pr),
-        "closed": len(closed_pr),
-        "closed_per_month": five_close_per_month,
-    },
     "docker_images": docker_images,
 }
 
@@ -200,7 +194,5 @@ for run in workflow_runs:
     )
 
 # Save the data to a JSON file
-
-
 with open("github_action_data.json", "w") as jsonfile:
     json.dump(json_data, jsonfile, indent=4)

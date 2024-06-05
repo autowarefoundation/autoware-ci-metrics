@@ -154,6 +154,7 @@ class GithubPackagesAPI:
         endpoint = (
             f"https://api.github.com/orgs/{org}/packages/container/{pkg}/versions"
         )
+        print(f"Fetching packages from {endpoint}")
         response = requests.get(endpoint, headers=self.headers, params=payloads).json()
 
         packages = response
