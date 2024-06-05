@@ -202,6 +202,7 @@ fetch('github_action_data.json')
         type: 'datetime',
       },
       yaxis: {
+        min: 0,
         labels: {
           formatter: (val) => `${val.toFixed(2)}h`,
         },
@@ -283,6 +284,7 @@ fetch('github_action_data.json')
         type: 'datetime',
       },
       yaxis: {
+        min: 0,
         labels: {
           formatter: (val) => `${val.toFixed(2)}GB`,
         },
