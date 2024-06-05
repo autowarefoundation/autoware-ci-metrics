@@ -1,5 +1,5 @@
 __pycache__
-cache/
-venve/
-
-public/github_action_data.json
+cache/autowarefoundation*
+cache/docker*
+venv/
+github_action_data.json
