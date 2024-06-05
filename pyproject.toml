@@ -1,0 +1,35 @@
+[project]
+name = "autoware-ci-metrics"
+version = "0.1.0"
+authors = [{name="Autoware Foundation"}]
+dependencies = ["requests", "numpy", "python-dxf"]
+readme = "README.md"
+
+[project.urls]
+Repository = "https://github.com/autowarefoundation/autoware-ci-metrics"
+
+[tool.setuptools]
+package-dir = {"" = "scripts"}
+
+[tool.mypy]
+files = [
+    "scripts",
+]
+ignore_missing_imports = true
+
+[tool.pysen]
+version = "0.11"
+
+[tool.pysen.lint]
+enable_black = true
+enable_flake8 = true
+enable_isort = true
+enable_mypy = true
+line_length = 80
+py_version = "py310"
+
+[tool.pysen.lint.source]
+excludes = [
+  ".github",
+  "public",
+]

@@ -1,9 +1,9 @@
 # `colcon build` output analysis
 
 
-from datetime import datetime
 import re
-from typing import List, Tuple, Dict
+from datetime import datetime
+from typing import Dict, List, Tuple
 
 
 class ColconLogAnalyzer:
