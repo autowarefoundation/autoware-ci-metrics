@@ -1,13 +1,12 @@
-from datetime import datetime
-import re
 import argparse
+import json
+import re
+from datetime import datetime
 
 import github_api
+import numpy as np
 from colcon_log_analyzer import ColconLogAnalyzer
 from dxf import DXF
-
-import numpy as np
-import json
 
 # Constant
 REPO = "autowarefoundation/autoware"
@@ -24,8 +23,8 @@ CACHE_DIR = "./cache/"
 
 # Utility function
 def try_cache(key: str, f):
-    import pathlib
     import json
+    import pathlib
 
     key = key.replace("/", "_")
     cache_path = pathlib.Path(CACHE_DIR) / key
@@ -75,7 +74,9 @@ workflow_runs = workflow_api.get_workflow_duration_list(
 
 
 # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
-workflow_runs = [item for item in workflow_runs if 60 < item["duration"] < 3600 * 100]
+workflow_runs = [
+    item for item in workflow_runs if 60 < item["duration"] < 3600 * 100
+]
 
 ####################
 # Log analysis
