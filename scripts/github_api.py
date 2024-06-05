@@ -170,11 +170,16 @@ class GithubPackagesAPI:
             packages += response
 
         for package in packages:
-            package["created_at"] = datetime.strptime(
-                package["created_at"], self.time_format
-            )
-            package["updated_at"] = datetime.strptime(
-                package["updated_at"], self.time_format
-            )
+            try:
+                package["created_at"] = datetime.strptime(
+                    package["created_at"], self.time_format
+                )
+                package["updated_at"] = datetime.strptime(
+                    package["updated_at"], self.time_format
+                )
+            except TypeError:
+                print(f"Error in parsing {package}")
+                packages.remove(package)
+                continue
 
         return packages
