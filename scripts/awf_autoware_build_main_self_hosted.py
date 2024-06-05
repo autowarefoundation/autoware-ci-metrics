@@ -18,7 +18,7 @@ BUILD_LOG_IDS = [
     "build-main (cuda)/7_Build 'autoware-universe'.txt",
 ]
 DOCKER_ORGS = "autowarefoundation"
-DOCKER_IMAGE = "autoware-universe"
+DOCKER_IMAGE = "autoware"
 CACHE_DIR = "./cache/"
 
 
@@ -150,10 +150,10 @@ for package in packages:
     if tag_count == 0:
         continue
     tag = package["metadata"]["container"]["tags"][0]
-    if not tag.endswith("amd64") or "cuda" in tag or "prebuilt" not in tag:
+    if not tag.endswith("amd64") or "cuda" not in tag or "prebuilt" not in tag:
         continue
 
-    print(tag)
+    print(f"Fetching manifest for {tag}")
     manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
     if manifest is None:
         print(f"Failed to fetch manifest for {tag}")

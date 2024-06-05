@@ -156,7 +156,6 @@ class GithubPackagesAPI:
         )
         print(f"Fetching packages from {endpoint}")
         response = requests.get(endpoint, headers=self.headers, params=payloads).json()
-
         packages = response
 
         while len(response) == payloads["per_page"]:
@@ -168,7 +167,6 @@ class GithubPackagesAPI:
             packages += response
 
         for package in packages:
-            print(package)
             try:
                 package["created_at"] = datetime.strptime(
                     package["created_at"], self.time_format
