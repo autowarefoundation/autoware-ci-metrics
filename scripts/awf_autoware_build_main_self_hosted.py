@@ -179,7 +179,6 @@ for package in packages:
 
 json_data = {
     "workflow_time": [],
-    "spell_checks": spell_checks,
     "pulls": {
         "total": len(all_pr),
         "closed": len(closed_pr),

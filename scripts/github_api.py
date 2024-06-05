@@ -23,10 +23,7 @@ class GitHubWorkflowAPI:
         first_page_response = requests.get(
             endpoint, headers=self.headers, params=payloads
         ).json()
-
         workflow_runs = first_page_response["workflow_runs"]
-
-        print(f"Total count: {first_page_response['total_count']}")
 
         # Reuse first_page_response to get the total count of workflow runs
         total_count = first_page_response["total_count"]
@@ -170,6 +167,7 @@ class GithubPackagesAPI:
             packages += response
 
         for package in packages:
+            print(package)
             try:
                 package["created_at"] = datetime.strptime(
                     package["created_at"], self.time_format
@@ -179,7 +177,6 @@ class GithubPackagesAPI:
                 )
             except TypeError:
                 print(f"Error in parsing {package}")
-                packages.remove(package)
                 continue
 
         return packages
