@@ -14,6 +14,7 @@ BUILD_LOG_IDS = [
     "build-main/9_Build.txt",
     "build-main (cuda)/5_Build 'autoware-universe'.txt",
     "build-main (cuda)/7_Build 'autoware-universe'.txt",
+    "build-main (cuda)/5_Build 'Autoware'.txt",
 ]
 DOCKER_ORGS = "autowarefoundation"
 DOCKER_IMAGE = "autoware"
