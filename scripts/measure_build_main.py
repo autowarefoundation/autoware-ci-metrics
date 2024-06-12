@@ -11,10 +11,9 @@ REPO = "autowarefoundation/autoware"
 BUILD_WORKFLOW_ID = "build-main.yaml"
 BUILD_WORKFLOW_SELF_HOSTED_ID = "build-main-self-hosted.yaml"
 BUILD_LOG_IDS = [
-    "build-main/9_Build.txt",
-    "build-main (cuda)/5_Build 'autoware-universe'.txt",
-    "build-main (cuda)/7_Build 'autoware-universe'.txt",
-    "build-main (cuda)/5_Build 'Autoware'.txt",
+    "_Build.txt",
+    "_Build 'autoware-universe'.txt",
+    "_Build 'Autoware'.txt",
 ]
 DOCKER_ORGS = "autowarefoundation"
 DOCKER_IMAGE = "autoware"
@@ -109,9 +108,10 @@ for run in workflow_runs:
         continue
 
     build_log_text = ""
-    for log_id in BUILD_LOG_IDS:
-        if log_id in logs.keys():
-            build_log_text = logs[log_id]
+    for log in logs.keys():
+        if any([log_id in log for log_id in BUILD_LOG_IDS]):
+            print(log)
+            build_log_text = logs[log]
             break
     if build_log_text == "":
         print(f"Log for run_id={run['id']} not found.")
