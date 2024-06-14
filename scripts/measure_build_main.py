@@ -77,12 +77,12 @@ workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
 
 # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
 workflow_runs = [
-    item for item in workflow_runs if 60 * 5 < item["duration"] < 3600 * 10
+    item for item in workflow_runs if 60 * 10 < item["duration"] < 3600 * 10
 ]
 workflow_runs_self_hosted = [
     item
     for item in workflow_runs_self_hosted
-    if 60 * 5 < item["duration"] < 3600 * 10
+    if 60 * 10 < item["duration"] < 3600 * 10
 ]
 
 ####################
