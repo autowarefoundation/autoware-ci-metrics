@@ -8,8 +8,10 @@ from dxf import DXF
 
 # Constant
 REPO = "autowarefoundation/autoware"
-BUILD_WORKFLOW_ID = "build-main.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID = "build-main-self-hosted.yaml"
+BUILD_WORKFLOW_ID = "docker-build-and-push.yaml"
+BUILD_WORKFLOW_ID_OLD = "docker-build-and-push-main.yaml"
+BUILD_WORKFLOW_SELF_HOSTED_ID = "docker-build-and-push-self-hosted.yaml"
+BUILD_WORKFLOW_SELF_HOSTED_ID_OLD = "docker-build-and-push-main-self-hosted.yaml"
 BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
@@ -64,9 +66,13 @@ workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
 # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
 workflow_runs = workflow_api.get_workflow_duration_list(
+    REPO, BUILD_WORKFLOW_ID_OLD, accurate=True
+) + workflow_api.get_workflow_duration_list(
     REPO, BUILD_WORKFLOW_ID, accurate=True
 )
 workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
+    REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, accurate=True
+) + workflow_api.get_workflow_duration_list(
     REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, accurate=True
 )
 
@@ -200,12 +206,12 @@ for package in packages:
 ####################
 
 json_data = {
-    "workflow_time": {"build-main": [], "build-main-self-hosted": []},
+    "workflow_time": {"docker-build-and-push": [], "docker-build-and-push-self-hosted": []},
     "docker_images": docker_images,
 }
 
 for run in workflow_runs:
-    json_data["workflow_time"]["build-main"].append(
+    json_data["workflow_time"]["docker-build-and-push"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
@@ -217,7 +223,7 @@ for run in workflow_runs:
         }
     )
 for run in workflow_runs_self_hosted:
-    json_data["workflow_time"]["build-main-self-hosted"].append(
+    json_data["workflow_time"]["docker-build-and-push-self-hosted"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
