@@ -1,10 +1,10 @@
 fetch('github_action_data.json')
   .then((res) => res.json())
   .then((json) => {
-    const validatedWorkflowTime = json.workflow_time["build-main"].filter(
-      (data) => 'build-main (no-cuda)' in data.jobs && 'build-main (cuda)' in data.jobs);
-    const validatedWorkflowTimeSelfHosted = json.workflow_time["build-main-self-hosted"].filter(
-      (data) => 'build-main-self-hosted (no-cuda)' in data.jobs && 'build-main-self-hosted (cuda)' in data.jobs);
+    const validatedWorkflowTime = json.workflow_time["health-check"].filter(
+      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
+    const validatedWorkflowTimeSelfHosted = json.workflow_time["health-check-self-hosted"].filter(
+      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
     const packageList = new Set(
       validatedWorkflowTime.flatMap((data) => Object.keys(data.details ?? {})),
     );
@@ -163,27 +163,27 @@ fetch('github_action_data.json')
     const buildDurationOptions = {
       series: [
         {
-          name: 'build-main (no-cuda)',
+          name: 'health-check (no-cuda)',
           data: validatedWorkflowTime.map((data) => {
-            return [new Date(data.date), data.jobs['build-main (no-cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
           }),
         },
         {
-          name: 'build-main (cuda)',
+          name: 'health-check (cuda)',
           data: validatedWorkflowTime.map((data) => {
-            return [new Date(data.date), data.jobs['build-main (cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
           }),
         },
         {
-          name: 'build-main-self-hosted (no-cuda)',
+          name: 'health-check-self-hosted (no-cuda)',
           data: validatedWorkflowTimeSelfHosted.map((data) => {
-            return [new Date(data.date), data.jobs['build-main-self-hosted (no-cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
           }),
         },
         {
-          name: 'build-main-self-hosted (cuda)',
+          name: 'health-check-self-hosted (cuda)',
           data: validatedWorkflowTimeSelfHosted.map((data) => {
-            return [new Date(data.date), data.jobs['build-main-self-hosted (cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
           }),
         },
       ],

@@ -8,8 +8,10 @@ from dxf import DXF
 
 # Constant
 REPO = "autowarefoundation/autoware"
-BUILD_WORKFLOW_ID = "build-main.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID = "build-main-self-hosted.yaml"
+BUILD_WORKFLOW_ID = "health-check.yaml"
+BUILD_WORKFLOW_ID_OLD = "build-main.yaml"
+BUILD_WORKFLOW_SELF_HOSTED_ID = "health-check-self-hosted.yaml"
+BUILD_WORKFLOW_SELF_HOSTED_ID_OLD = "build-main-self-hosted.yaml"
 BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
@@ -64,9 +66,13 @@ workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
 # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
 workflow_runs = workflow_api.get_workflow_duration_list(
+    REPO, BUILD_WORKFLOW_ID_OLD, accurate=True
+) + workflow_api.get_workflow_duration_list(
     REPO, BUILD_WORKFLOW_ID, accurate=True
 )
 workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
+    REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, accurate=True
+) + workflow_api.get_workflow_duration_list(
     REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, accurate=True
 )
 
@@ -200,29 +206,57 @@ for package in packages:
 ####################
 
 json_data = {
-    "workflow_time": {"build-main": [], "build-main-self-hosted": []},
+    "workflow_time": {"health-check": [], "health-check-self-hosted": []},
     "docker_images": docker_images,
 }
 
 for run in workflow_runs:
-    json_data["workflow_time"]["build-main"].append(
+    # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
+    cuda_job = None
+    no_cuda_job = None
+    for job in run["jobs"]:
+        if "(cuda)" in job:
+            cuda_job = job
+        elif "(no-cuda)" in job:
+            no_cuda_job = job
+    if cuda_job is None or no_cuda_job is None:
+        continue
+
+    json_data["workflow_time"]["health-check"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
             "duration": run["duration"] / 3600,
-            "jobs": run["jobs"],
+            "jobs": {
+                "cuda": run["jobs"][cuda_job],
+                "no-cuda": run["jobs"][no_cuda_job],
+            },
             "details": package_duration_logs[run["id"]]["duration"]
             if run["id"] in package_duration_logs
             else None,
         }
     )
 for run in workflow_runs_self_hosted:
-    json_data["workflow_time"]["build-main-self-hosted"].append(
+    # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
+    cuda_job = None
+    no_cuda_job = None
+    for job in run["jobs"]:
+        if "(cuda)" in job:
+            cuda_job = job
+        elif "(no-cuda)" in job:
+            no_cuda_job = job
+    if cuda_job is None or no_cuda_job is None:
+        continue
+
+    json_data["workflow_time"]["health-check-self-hosted"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
             "duration": run["duration"] / 3600,
-            "jobs": run["jobs"],
+            "jobs": {
+                "cuda": run["jobs"][cuda_job],
+                "no-cuda": run["jobs"][no_cuda_job],
+            },
             "details": package_duration_logs[run["id"]]["duration"]
             if run["id"] in package_duration_logs
             else None,
