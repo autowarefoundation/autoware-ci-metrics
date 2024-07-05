@@ -8,10 +8,10 @@ from dxf import DXF
 
 # Constant
 REPO = "autowarefoundation/autoware"
-BUILD_WORKFLOW_ID = "docker-build-and-push.yaml"
-BUILD_WORKFLOW_ID_OLD = "docker-build-and-push-main.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID = "docker-build-and-push-self-hosted.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID_OLD = "docker-build-and-push-main-self-hosted.yaml"
+BUILD_WORKFLOW_ID = "health-check.yaml"
+BUILD_WORKFLOW_ID_OLD = "build-main.yaml"
+BUILD_WORKFLOW_SELF_HOSTED_ID = "health-check-self-hosted.yaml"
+BUILD_WORKFLOW_SELF_HOSTED_ID_OLD = "build-main-self-hosted.yaml"
 BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
@@ -206,12 +206,12 @@ for package in packages:
 ####################
 
 json_data = {
-    "workflow_time": {"docker-build-and-push": [], "docker-build-and-push-self-hosted": []},
+    "workflow_time": {"health-check": [], "health-check-self-hosted": []},
     "docker_images": docker_images,
 }
 
 for run in workflow_runs:
-    json_data["workflow_time"]["docker-build-and-push"].append(
+    json_data["workflow_time"]["health-check"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
@@ -223,7 +223,7 @@ for run in workflow_runs:
         }
     )
 for run in workflow_runs_self_hosted:
-    json_data["workflow_time"]["docker-build-and-push-self-hosted"].append(
+    json_data["workflow_time"]["health-check-self-hosted"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
