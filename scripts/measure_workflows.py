@@ -211,24 +211,52 @@ json_data = {
 }
 
 for run in workflow_runs:
+    # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
+    cuda_job = None
+    no_cuda_job = None
+    for job in run["jobs"]:
+        if "(cuda)" in job:
+            cuda_job = job
+        elif "(no-cuda)" in job:
+            no_cuda_job = job
+    if cuda_job is None or no_cuda_job is None:
+        continue
+
     json_data["workflow_time"]["health-check"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
             "duration": run["duration"] / 3600,
-            "jobs": run["jobs"],
+            "jobs": {
+                "cuda": run["jobs"][cuda_job],
+                "no-cuda": run["jobs"][no_cuda_job],
+            },
             "details": package_duration_logs[run["id"]]["duration"]
             if run["id"] in package_duration_logs
             else None,
         }
     )
 for run in workflow_runs_self_hosted:
+    # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
+    cuda_job = None
+    no_cuda_job = None
+    for job in run["jobs"]:
+        if "(cuda)" in job:
+            cuda_job = job
+        elif "(no-cuda)" in job:
+            no_cuda_job = job
+    if cuda_job is None or no_cuda_job is None:
+        continue
+
     json_data["workflow_time"]["health-check-self-hosted"].append(
         {
             "run_id": run["id"],
             "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
             "duration": run["duration"] / 3600,
-            "jobs": run["jobs"],
+            "jobs": {
+                "cuda": run["jobs"][cuda_job],
+                "no-cuda": run["jobs"][no_cuda_job],
+            },
             "details": package_duration_logs[run["id"]]["duration"]
             if run["id"] in package_duration_logs
             else None,

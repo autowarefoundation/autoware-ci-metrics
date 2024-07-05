@@ -1,10 +1,10 @@
 fetch('github_action_data.json')
   .then((res) => res.json())
   .then((json) => {
-    const validatedWorkflowTime = json.workflow_time["docker-build-and-push"].filter(
-      (data) => 'docker-build-and-push-main (no-cuda)' in data.jobs && 'docker-build-and-push-main (cuda)' in data.jobs);
-    const validatedWorkflowTimeSelfHosted = json.workflow_time["docker-build-and-push-self-hosted"].filter(
-      (data) => 'docker-build-and-push-main-self-hosted (no-cuda)' in data.jobs && 'docker-build-and-push-main-self-hosted (cuda)' in data.jobs);
+    const validatedWorkflowTime = json.workflow_time["health-check"].filter(
+      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
+    const validatedWorkflowTimeSelfHosted = json.workflow_time["health-check-self-hosted"].filter(
+      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
     const packageList = new Set(
       validatedWorkflowTime.flatMap((data) => Object.keys(data.details ?? {})),
     );
@@ -163,27 +163,27 @@ fetch('github_action_data.json')
     const buildDurationOptions = {
       series: [
         {
-          name: 'docker-build-and-push (no-cuda)',
+          name: 'health-check (no-cuda)',
           data: validatedWorkflowTime.map((data) => {
-            return [new Date(data.date), data.jobs['docker-build-and-push-main (no-cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
           }),
         },
         {
-          name: 'docker-build-and-push (cuda)',
+          name: 'health-check (cuda)',
           data: validatedWorkflowTime.map((data) => {
-            return [new Date(data.date), data.jobs['docker-build-and-push-main (cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
           }),
         },
         {
-          name: 'docker-build-and-push-self-hosted (no-cuda)',
+          name: 'health-check-self-hosted (no-cuda)',
           data: validatedWorkflowTimeSelfHosted.map((data) => {
-            return [new Date(data.date), data.jobs['docker-build-and-push-main-self-hosted (no-cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
           }),
         },
         {
-          name: 'docker-build-and-push-self-hosted (cuda)',
+          name: 'health-check-self-hosted (cuda)',
           data: validatedWorkflowTimeSelfHosted.map((data) => {
-            return [new Date(data.date), data.jobs['docker-build-and-push-main-self-hosted (cuda)'] / 3600.0];
+            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
           }),
         },
       ],
