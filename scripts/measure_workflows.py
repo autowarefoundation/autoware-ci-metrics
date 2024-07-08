@@ -179,64 +179,47 @@ def get_docker_image_analysis(github_token, github_actor):
     return docker_images
 
 
-def export_to_json(workflow_runs, workflow_runs_self_hosted, package_duration_logs, docker_images):
+def export_to_json(
+    workflow_runs,
+    workflow_runs_self_hosted,
+    package_duration_logs,
+    docker_images,
+):
     json_data = {
         "workflow_time": {"health-check": [], "health-check-self-hosted": []},
         "docker_images": docker_images,
     }
 
-    for run in workflow_runs:
-        # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
-        cuda_job = None
-        no_cuda_job = None
-        for job in run["jobs"]:
-            if "(cuda)" in job:
-                cuda_job = job
-            elif "(no-cuda)" in job:
-                no_cuda_job = job
-        if cuda_job is None or no_cuda_job is None:
-            continue
+    def _export_to_json(workflow_name):
+        for run in workflow_runs:
+            # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
+            cuda_job = None
+            no_cuda_job = None
+            for job in run["jobs"]:
+                if "(cuda)" in job:
+                    cuda_job = job
+                elif "(no-cuda)" in job:
+                    no_cuda_job = job
+            if cuda_job is None or no_cuda_job is None:
+                continue
 
-        json_data["workflow_time"]["health-check"].append(
-            {
-                "run_id": run["id"],
-                "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
-                "duration": run["duration"] / 3600,
-                "jobs": {
-                    "cuda": run["jobs"][cuda_job],
-                    "no-cuda": run["jobs"][no_cuda_job],
-                },
-                "details": package_duration_logs[run["id"]]["duration"]
-                if run["id"] in package_duration_logs
-                else None,
-            }
-        )
-    for run in workflow_runs_self_hosted:
-        # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
-        cuda_job = None
-        no_cuda_job = None
-        for job in run["jobs"]:
-            if "(cuda)" in job:
-                cuda_job = job
-            elif "(no-cuda)" in job:
-                no_cuda_job = job
-        if cuda_job is None or no_cuda_job is None:
-            continue
+            json_data["workflow_time"][workflow_name].append(
+                {
+                    "run_id": run["id"],
+                    "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
+                    "duration": run["duration"] / 3600,
+                    "jobs": {
+                        "cuda": run["jobs"][cuda_job],
+                        "no-cuda": run["jobs"][no_cuda_job],
+                    },
+                    "details": package_duration_logs[run["id"]]["duration"]
+                    if run["id"] in package_duration_logs
+                    else None,
+                }
+            )
 
-        json_data["workflow_time"]["health-check-self-hosted"].append(
-            {
-                "run_id": run["id"],
-                "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
-                "duration": run["duration"] / 3600,
-                "jobs": {
-                    "cuda": run["jobs"][cuda_job],
-                    "no-cuda": run["jobs"][no_cuda_job],
-                },
-                "details": package_duration_logs[run["id"]]["duration"]
-                if run["id"] in package_duration_logs
-                else None,
-            }
-        )
+    _export_to_json("health-check")
+    _export_to_json("health-check-self-hosted")
     return json_data
 
 
@@ -264,7 +247,12 @@ if __name__ == "__main__":
     workflow_runs, workflow_runs_self_hosted = get_workflow_runs(github_token)
     package_duration_logs = get_package_duration_logs(github_token)
     docker_images = get_docker_image_analysis(github_token, github_actor)
-    json_data = export_to_json(workflow_runs, workflow_runs_self_hosted, package_duration_logs, docker_images)
+    json_data = export_to_json(
+        workflow_runs,
+        workflow_runs_self_hosted,
+        package_duration_logs,
+        docker_images,
+    )
 
     with open("github_action_data.json", "w") as jsonfile:
         json.dump(json_data, jsonfile, indent=4)
