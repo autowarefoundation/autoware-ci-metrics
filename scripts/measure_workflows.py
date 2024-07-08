@@ -42,19 +42,19 @@ def try_cache(key: str, f):
         return result
 
 
-def get_workflow_runs(github_token):
+def get_workflow_runs(github_token, date_threshold):
     workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
     # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
     workflow_runs = workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_ID_OLD, accurate=True
+        REPO, BUILD_WORKFLOW_ID_OLD, True, date_threshold
     ) + workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_ID, accurate=True
+        REPO, BUILD_WORKFLOW_ID, True, date_threshold
     )
     workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, accurate=True
+        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, True, date_threshold
     ) + workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, accurate=True
+        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, True, date_threshold
     )
 
     # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
@@ -185,12 +185,8 @@ def export_to_json(
     package_duration_logs,
     docker_images,
 ):
-    json_data = {
-        "workflow_time": {"health-check": [], "health-check-self-hosted": []},
-        "docker_images": docker_images,
-    }
-
-    def _export_to_json(workflow_name):
+    def _export_to_json(workflow_runs):
+        json_data = []
         for run in workflow_runs:
             # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
             cuda_job = None
@@ -203,7 +199,7 @@ def export_to_json(
             if cuda_job is None or no_cuda_job is None:
                 continue
 
-            json_data["workflow_time"][workflow_name].append(
+            json_data.append(
                 {
                     "run_id": run["id"],
                     "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
@@ -217,9 +213,17 @@ def export_to_json(
                     else None,
                 }
             )
+        return json_data
 
-    _export_to_json("health-check")
-    _export_to_json("health-check-self-hosted")
+    json_data = {
+        "workflow_time": {
+            "health-check": _export_to_json(workflow_runs),
+            "health-check-self-hosted": _export_to_json(
+                workflow_runs_self_hosted
+            ),
+        },
+        "docker_images": docker_images,
+    }
     return json_data
 
 
@@ -244,7 +248,9 @@ if __name__ == "__main__":
     github_token = args.github_token
     github_actor = args.github_actor
 
-    workflow_runs, workflow_runs_self_hosted = get_workflow_runs(github_token)
+    workflow_runs, workflow_runs_self_hosted = get_workflow_runs(
+        github_token, datetime(2024, 1, 1)
+    )
     package_duration_logs = get_package_duration_logs(github_token)
     docker_images = get_docker_image_analysis(github_token, github_actor)
     json_data = export_to_json(

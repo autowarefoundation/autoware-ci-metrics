@@ -1,6 +1,7 @@
 # GitHub Workflow API wrapper
 import math
 from datetime import datetime
+from typing import Optional
 
 import requests
 
@@ -16,7 +17,11 @@ class GitHubWorkflowAPI:
         self.time_format = "%Y-%m-%dT%H:%M:%SZ"
 
     def get_workflow_duration_list(
-        self, repo: str, workflow_id: str, accurate=False
+        self,
+        repo: str,
+        workflow_id: str,
+        accurate=False,
+        date_threshold: Optional[datetime] = None,
     ):
         payloads = {"per_page": 100, "status": "completed", "page": "1"}
         endpoint = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
@@ -58,6 +63,9 @@ class GitHubWorkflowAPI:
             run["updated_at"] = datetime.strptime(
                 run["updated_at"], self.time_format
             )
+        workflow_runs = [
+            run for run in workflow_runs if run["created_at"] > date_threshold
+        ]
 
         # Sorting by created_at (oldest to newest, utility function)
         workflow_runs = sorted(workflow_runs, key=lambda k: k["created_at"])
