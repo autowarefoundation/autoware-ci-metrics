@@ -42,227 +42,217 @@ def try_cache(key: str, f):
         return result
 
 
-# Setup argparse to parse command-line arguments
-parser = argparse.ArgumentParser(
-    description="Fetch GitHub Action's run data and plot it."
-)
-parser.add_argument(
-    "--github_token",
-    required=True,
-    help="GitHub Token to authenticate with GitHub API.",
-)
-parser.add_argument(
-    "--github_actor",
-    required=True,
-    help="GitHub username to authenticate with GitHub API (Packages).",
-)
-args = parser.parse_args()
+def get_workflow_runs(github_token):
+    workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
-# Use the github_token passed as command-line argument
-github_token = args.github_token
-github_actor = args.github_actor
+    # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
+    workflow_runs = workflow_api.get_workflow_duration_list(
+        REPO, BUILD_WORKFLOW_ID_OLD, accurate=True
+    ) + workflow_api.get_workflow_duration_list(
+        REPO, BUILD_WORKFLOW_ID, accurate=True
+    )
+    workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
+        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, accurate=True
+    ) + workflow_api.get_workflow_duration_list(
+        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, accurate=True
+    )
 
-workflow_api = github_api.GitHubWorkflowAPI(github_token)
-
-# TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
-workflow_runs = workflow_api.get_workflow_duration_list(
-    REPO, BUILD_WORKFLOW_ID_OLD, accurate=True
-) + workflow_api.get_workflow_duration_list(
-    REPO, BUILD_WORKFLOW_ID, accurate=True
-)
-workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
-    REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, accurate=True
-) + workflow_api.get_workflow_duration_list(
-    REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, accurate=True
-)
-
-####################
-# Build time analysis
-####################
+    # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
+    workflow_runs = [
+        item for item in workflow_runs if 60 * 10 < item["duration"] < 3600 * 10
+    ]
+    workflow_runs_self_hosted = [
+        item
+        for item in workflow_runs_self_hosted
+        if 60 * 10 < item["duration"] < 3600 * 10
+    ]
+    return workflow_runs, workflow_runs_self_hosted
 
 
-# Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
-workflow_runs = [
-    item for item in workflow_runs if 60 * 10 < item["duration"] < 3600 * 10
-]
-workflow_runs_self_hosted = [
-    item
-    for item in workflow_runs_self_hosted
-    if 60 * 10 < item["duration"] < 3600 * 10
-]
+def get_package_duration_logs(github_token):
+    workflow_api = github_api.GitHubWorkflowAPI(github_token)
+    package_duration_logs = {}
 
-####################
-# Log analysis
-####################
+    # Fetch logs
+    # Log may be removed, so handling 404 error is necessary
+    for run in workflow_runs:
+        # older than 90 days
+        if (datetime.now() - run["created_at"]).days > 90:
+            continue
 
-package_duration_logs = {}
+        try:
+            logs = try_cache(
+                f"{REPO}-{run['id']}",
+                lambda: workflow_api.get_workflow_logs(REPO, run["id"]),
+            )
+        except Exception as e:
+            print(f"Log for run_id={run['id']} cannot be fetched. {e}")
+            continue
 
-# Fetch logs
-# Log may be removed, so handling 404 error is necessary
-for run in workflow_runs:
-    # older than 90 days
-    if (datetime.now() - run["created_at"]).days > 90:
-        continue
+        build_log_text = ""
+        for log in logs.keys():
+            if any([log_id in log for log_id in BUILD_LOG_IDS]):
+                print(log)
+                build_log_text = logs[log]
+                break
+        if build_log_text == "":
+            print(f"Log for run_id={run['id']} not found.")
+            continue
 
-    try:
-        logs = try_cache(
-            f"{REPO}-{run['id']}",
-            lambda: workflow_api.get_workflow_logs(REPO, run["id"]),
+        analyzer = ColconLogAnalyzer(build_log_text)
+        package_duration_list = analyzer.get_build_duration_list()
+
+        # Sort by duration
+        package_duration_list = sorted(
+            package_duration_list, key=lambda k: -k[2]
         )
-    except Exception as e:
-        print(f"Log for run_id={run['id']} cannot be fetched. {e}")
-        continue
 
-    build_log_text = ""
-    for log in logs.keys():
-        if any([log_id in log for log_id in BUILD_LOG_IDS]):
-            print(log)
-            build_log_text = logs[log]
-            break
-    if build_log_text == "":
-        print(f"Log for run_id={run['id']} not found.")
-        continue
+        # Into KV
+        package_duration_dict = {}
 
-    analyzer = ColconLogAnalyzer(build_log_text)
-    package_duration_list = analyzer.get_build_duration_list()
+        for package in package_duration_list:
+            package_duration_dict[package[0]] = package[2]
 
-    # Sort by duration
-    package_duration_list = sorted(package_duration_list, key=lambda k: -k[2])
+        package_duration_logs[run["id"]] = {
+            "run_id": run["id"],
+            "date": run["created_at"],
+            "duration": package_duration_dict,
+        }
+    return package_duration_logs
 
-    # Into KV
-    package_duration_dict = {}
 
-    for package in package_duration_list:
-        package_duration_dict[package[0]] = package[2]
+def get_docker_image_analysis(github_token, github_actor):
+    package_api = github_api.GithubPackagesAPI(github_token)
+    packages = package_api.get_all_containers(DOCKER_ORGS, DOCKER_IMAGE)
 
-    package_duration_logs[run["id"]] = {
-        "run_id": run["id"],
-        "date": run["created_at"],
-        "duration": package_duration_dict,
+    def auth(dxf, response):
+        dxf.authenticate(github_actor, github_token, response=response)
+
+    docker_images = {
+        "prebuilt-cuda-amd64": [],
+        "devel-cuda-amd64": [],
+        "runtime-cuda-amd64": [],
+        "prebuilt-cuda-arm64": [],
+        "devel-cuda-arm64": [],
+        "runtime-cuda-arm64": [],
     }
 
-####################
-# Docker image analysis
-####################
+    dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
+    for package in packages:
+        tag_count = len(package["metadata"]["container"]["tags"])
+        if tag_count == 0:
+            continue
+        tag = package["metadata"]["container"]["tags"][0]
+        if (
+            not tag.endswith("amd64") and not tag.endswith("arm64")
+        ) or "cuda" not in tag:
+            continue
+        docker_image = ""
+        for key in ("prebuilt", "devel", "runtime"):
+            if key in tag:
+                docker_image = (
+                    key
+                    + "-cuda-"
+                    + ("amd64" if tag.endswith("amd64") else "arm64")
+                )
+                break
+        if docker_image == "":
+            continue
 
-package_api = github_api.GithubPackagesAPI(github_token)
-packages = package_api.get_all_containers(DOCKER_ORGS, DOCKER_IMAGE)
+        print(f"Fetching manifest for {tag}")
+        manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
+        if manifest is None:
+            print(f"Failed to fetch manifest for {tag}")
+            continue
+        metadata = json.loads(
+            (manifest["linux/amd64"] if type(manifest) is dict else manifest)
+        )
+
+        total_size = sum([layer["size"] for layer in metadata["layers"]])
+        docker_images[docker_image].append(
+            {
+                "size": total_size,
+                "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
+                "tag": tag,
+            }
+        )
+    return docker_images
 
 
-def auth(dxf, response):
-    dxf.authenticate(github_actor, github_token, response=response)
+def export_to_json(
+    workflow_runs,
+    workflow_runs_self_hosted,
+    package_duration_logs,
+    docker_images,
+):
+    json_data = {
+        "workflow_time": {"health-check": [], "health-check-self-hosted": []},
+        "docker_images": docker_images,
+    }
 
+    def _export_to_json(workflow_name):
+        for run in workflow_runs:
+            # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
+            cuda_job = None
+            no_cuda_job = None
+            for job in run["jobs"]:
+                if "(cuda)" in job:
+                    cuda_job = job
+                elif "(no-cuda)" in job:
+                    no_cuda_job = job
+            if cuda_job is None or no_cuda_job is None:
+                continue
 
-docker_images = {
-    "prebuilt-cuda-amd64": [],
-    "devel-cuda-amd64": [],
-    "runtime-cuda-amd64": [],
-    "prebuilt-cuda-arm64": [],
-    "devel-cuda-arm64": [],
-    "runtime-cuda-arm64": [],
-}
-
-dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
-for package in packages:
-    tag_count = len(package["metadata"]["container"]["tags"])
-    if tag_count == 0:
-        continue
-    tag = package["metadata"]["container"]["tags"][0]
-    if (
-        not tag.endswith("amd64") and not tag.endswith("arm64")
-    ) or "cuda" not in tag:
-        continue
-    docker_image = ""
-    for key in ("prebuilt", "devel", "runtime"):
-        if key in tag:
-            docker_image = (
-                key + "-cuda-" + ("amd64" if tag.endswith("amd64") else "arm64")
+            json_data["workflow_time"][workflow_name].append(
+                {
+                    "run_id": run["id"],
+                    "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
+                    "duration": run["duration"] / 3600,
+                    "jobs": {
+                        "cuda": run["jobs"][cuda_job],
+                        "no-cuda": run["jobs"][no_cuda_job],
+                    },
+                    "details": package_duration_logs[run["id"]]["duration"]
+                    if run["id"] in package_duration_logs
+                    else None,
+                }
             )
-            break
-    if docker_image == "":
-        continue
 
-    print(f"Fetching manifest for {tag}")
-    manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
-    if manifest is None:
-        print(f"Failed to fetch manifest for {tag}")
-        continue
-    metadata = json.loads(
-        (manifest["linux/amd64"] if type(manifest) is dict else manifest)
+    _export_to_json("health-check")
+    _export_to_json("health-check-self-hosted")
+    return json_data
+
+
+if __name__ == "__main__":
+    # Setup argparse to parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Fetch GitHub Action's run data and plot it."
+    )
+    parser.add_argument(
+        "--github_token",
+        required=True,
+        help="GitHub Token to authenticate with GitHub API.",
+    )
+    parser.add_argument(
+        "--github_actor",
+        required=True,
+        help="GitHub username to authenticate with GitHub API (Packages).",
+    )
+    args = parser.parse_args()
+
+    # Use the github_token passed as command-line argument
+    github_token = args.github_token
+    github_actor = args.github_actor
+
+    workflow_runs, workflow_runs_self_hosted = get_workflow_runs(github_token)
+    package_duration_logs = get_package_duration_logs(github_token)
+    docker_images = get_docker_image_analysis(github_token, github_actor)
+    json_data = export_to_json(
+        workflow_runs,
+        workflow_runs_self_hosted,
+        package_duration_logs,
+        docker_images,
     )
 
-    total_size = sum([layer["size"] for layer in metadata["layers"]])
-    docker_images[docker_image].append(
-        {
-            "size": total_size,
-            "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
-            "tag": tag,
-        }
-    )
-
-
-####################
-# Output JSON for Pages
-####################
-
-json_data = {
-    "workflow_time": {"health-check": [], "health-check-self-hosted": []},
-    "docker_images": docker_images,
-}
-
-for run in workflow_runs:
-    # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
-    cuda_job = None
-    no_cuda_job = None
-    for job in run["jobs"]:
-        if "(cuda)" in job:
-            cuda_job = job
-        elif "(no-cuda)" in job:
-            no_cuda_job = job
-    if cuda_job is None or no_cuda_job is None:
-        continue
-
-    json_data["workflow_time"]["health-check"].append(
-        {
-            "run_id": run["id"],
-            "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
-            "duration": run["duration"] / 3600,
-            "jobs": {
-                "cuda": run["jobs"][cuda_job],
-                "no-cuda": run["jobs"][no_cuda_job],
-            },
-            "details": package_duration_logs[run["id"]]["duration"]
-            if run["id"] in package_duration_logs
-            else None,
-        }
-    )
-for run in workflow_runs_self_hosted:
-    # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
-    cuda_job = None
-    no_cuda_job = None
-    for job in run["jobs"]:
-        if "(cuda)" in job:
-            cuda_job = job
-        elif "(no-cuda)" in job:
-            no_cuda_job = job
-    if cuda_job is None or no_cuda_job is None:
-        continue
-
-    json_data["workflow_time"]["health-check-self-hosted"].append(
-        {
-            "run_id": run["id"],
-            "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
-            "duration": run["duration"] / 3600,
-            "jobs": {
-                "cuda": run["jobs"][cuda_job],
-                "no-cuda": run["jobs"][no_cuda_job],
-            },
-            "details": package_duration_logs[run["id"]]["duration"]
-            if run["id"] in package_duration_logs
-            else None,
-        }
-    )
-
-# Save the data to a JSON file
-with open("github_action_data.json", "w") as jsonfile:
-    json.dump(json_data, jsonfile, indent=4)
+    with open("github_action_data.json", "w") as jsonfile:
+        json.dump(json_data, jsonfile, indent=4)
