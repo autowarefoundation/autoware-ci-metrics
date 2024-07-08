@@ -40,7 +40,7 @@ fetch('github_action_data.json')
         },
       ],
       chart: {
-        height: 350,
+        height: 500,
         type: 'line',
         zoom: {
           enabled: true,
@@ -130,7 +130,7 @@ fetch('github_action_data.json')
         },
       ],
       chart: {
-        height: 350,
+        height: 500,
         type: 'line',
         zoom: {
           enabled: true,
