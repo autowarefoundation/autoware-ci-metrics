@@ -93,6 +93,19 @@ fetch('github_action_data.json')
     const dockerOptions = {
       series: [
         {
+          name: 'autoware-core-cuda-amd64',
+          data: json.docker_images['autoware-core-cuda-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'autoware-universe-cuda-amd64',
+          data: json.docker_images['autoware-universe-cuda-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          // Obsolete
           name: 'prebuilt-cuda-amd64',
           data: json.docker_images['prebuilt-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
@@ -111,6 +124,19 @@ fetch('github_action_data.json')
           }),
         },
         {
+          name: 'autoware-core-cuda-arm64',
+          data: json.docker_images['autoware-core-cuda-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'autoware-universe-cuda-arm64',
+          data: json.docker_images['autoware-universe-cuda-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          // Obsolete
           name: 'prebuilt-cuda-arm64',
           data: json.docker_images['prebuilt-cuda-arm64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
