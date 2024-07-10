@@ -129,10 +129,14 @@ def get_docker_image_analysis(github_token, github_actor):
         dxf.authenticate(github_actor, github_token, response=response)
 
     docker_images = {
-        "prebuilt-cuda-amd64": [],
+        "autoware-core-cuda-amd64": [],
+        "autoware-universe-cuda-amd64": [],
+        "prebuilt-cuda-amd64": [],  # Obsolete
         "devel-cuda-amd64": [],
         "runtime-cuda-amd64": [],
-        "prebuilt-cuda-arm64": [],
+        "autoware-core-cuda-arm64": [],
+        "autoware-universe-cuda-arm64": [],
+        "prebuilt-cuda-arm64": [],  # Obsolete
         "devel-cuda-arm64": [],
         "runtime-cuda-arm64": [],
     }
@@ -148,7 +152,7 @@ def get_docker_image_analysis(github_token, github_actor):
         ) or "cuda" not in tag:
             continue
         docker_image = ""
-        for key in ("prebuilt", "devel", "runtime"):
+        for key in ("autoware-core", "autoware-universe", "prebuilt", "devel", "runtime"):
             if key in tag:
                 docker_image = (
                     key
