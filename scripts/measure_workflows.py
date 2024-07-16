@@ -9,7 +9,10 @@ from dxf import DXF
 # Constant
 REPO = "autowarefoundation/autoware"
 HEALTH_CHECK_WORKFLOW_ID = ["health-check.yaml", "build-main.yaml"]
-HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID = ["health-check-self-hosted.yaml", "build-main-self-hosted.yaml"]
+HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID = [
+    "health-check-self-hosted.yaml",
+    "build-main-self-hosted.yaml",
+]
 BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
@@ -150,7 +153,13 @@ def get_docker_image_analysis(github_token, github_actor):
         ) or "cuda" not in tag:
             continue
         docker_image = ""
-        for key in ("autoware-core", "autoware-universe", "prebuilt", "devel", "runtime"):
+        for key in (
+            "autoware-core",
+            "autoware-universe",
+            "prebuilt",
+            "devel",
+            "runtime",
+        ):
             if key in tag:
                 docker_image = (
                     key
