@@ -8,10 +8,8 @@ from dxf import DXF
 
 # Constant
 REPO = "autowarefoundation/autoware"
-BUILD_WORKFLOW_ID = "health-check.yaml"
-BUILD_WORKFLOW_ID_OLD = "build-main.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID = "health-check-self-hosted.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID_OLD = "build-main-self-hosted.yaml"
+HEALTH_CHECK_WORKFLOW_ID = ["health-check.yaml", "build-main.yaml"]
+HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID = ["health-check-self-hosted.yaml", "build-main-self-hosted.yaml"]
 BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
@@ -47,14 +45,14 @@ def get_workflow_runs(github_token, date_threshold):
 
     # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
     workflow_runs = workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_ID_OLD, True, date_threshold
+        REPO, HEALTH_CHECK_WORKFLOW_ID[0], True, date_threshold
     ) + workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_ID, True, date_threshold
+        REPO, HEALTH_CHECK_WORKFLOW_ID[1], True, date_threshold
     )
     workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, True, date_threshold
+        REPO, HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID[0], True, date_threshold
     ) + workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, True, date_threshold
+        REPO, HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID[1], True, date_threshold
     )
 
     # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
