@@ -52,19 +52,19 @@ def get_workflow_runs(github_token, date_threshold):
 
     # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
     health_check = workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_WORKFLOW_ID[0], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
         REPO, HEALTH_CHECK_WORKFLOW_ID[1], True, date_threshold
+    ) + workflow_api.get_workflow_duration_list(
+        REPO, HEALTH_CHECK_WORKFLOW_ID[0], True, date_threshold
     )
     health_check_self_hosted = workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID[0], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
         REPO, HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID[1], True, date_threshold
+    ) + workflow_api.get_workflow_duration_list(
+        REPO, HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID[0], True, date_threshold
     )
     docker_build_and_push = workflow_api.get_workflow_duration_list(
-        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID[0], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
         REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID[1], True, date_threshold
+    ) + workflow_api.get_workflow_duration_list(
+        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID[0], True, date_threshold
     )
 
     # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
