@@ -8,10 +8,15 @@ from dxf import DXF
 
 # Constant
 REPO = "autowarefoundation/autoware"
-BUILD_WORKFLOW_ID = "health-check.yaml"
-BUILD_WORKFLOW_ID_OLD = "build-main.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID = "health-check-self-hosted.yaml"
-BUILD_WORKFLOW_SELF_HOSTED_ID_OLD = "build-main-self-hosted.yaml"
+HEALTH_CHECK_WORKFLOW_ID = ["health-check.yaml", "build-main.yaml"]
+HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID = [
+    "health-check-self-hosted.yaml",
+    "build-main-self-hosted.yaml",
+]
+DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = [
+    "docker-build-and-push.yaml",
+    "docker-build-and-push-main.yaml",
+]
 BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
@@ -46,27 +51,37 @@ def get_workflow_runs(github_token, date_threshold):
     workflow_api = github_api.GitHubWorkflowAPI(github_token)
 
     # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
-    workflow_runs = workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_ID_OLD, True, date_threshold
+    health_check = workflow_api.get_workflow_duration_list(
+        REPO, HEALTH_CHECK_WORKFLOW_ID[1], True, date_threshold
     ) + workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_ID, True, date_threshold
+        REPO, HEALTH_CHECK_WORKFLOW_ID[0], True, date_threshold
     )
-    workflow_runs_self_hosted = workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID_OLD, True, date_threshold
+    health_check_self_hosted = workflow_api.get_workflow_duration_list(
+        REPO, HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID[1], True, date_threshold
     ) + workflow_api.get_workflow_duration_list(
-        REPO, BUILD_WORKFLOW_SELF_HOSTED_ID, True, date_threshold
+        REPO, HEALTH_CHECK_WORKFLOW_SELF_HOSTED_ID[0], True, date_threshold
+    )
+    docker_build_and_push = workflow_api.get_workflow_duration_list(
+        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID[1], True, date_threshold
+    ) + workflow_api.get_workflow_duration_list(
+        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID[0], True, date_threshold
     )
 
     # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
-    workflow_runs = [
-        item for item in workflow_runs if 60 * 10 < item["duration"] < 3600 * 10
+    health_check = [
+        item for item in health_check if 60 * 10 < item["duration"] < 3600 * 10
     ]
-    workflow_runs_self_hosted = [
+    health_check_self_hosted = [
         item
-        for item in workflow_runs_self_hosted
+        for item in health_check_self_hosted
         if 60 * 10 < item["duration"] < 3600 * 10
     ]
-    return workflow_runs, workflow_runs_self_hosted
+    docker_build_and_push = [
+        item
+        for item in docker_build_and_push
+        if 60 * 10 < item["duration"] < 3600 * 10
+    ]
+    return health_check, health_check_self_hosted, docker_build_and_push
 
 
 def get_package_duration_logs(github_token):
@@ -75,7 +90,7 @@ def get_package_duration_logs(github_token):
 
     # Fetch logs
     # Log may be removed, so handling 404 error is necessary
-    for run in workflow_runs:
+    for run in health_check:
         # older than 90 days
         if (datetime.now() - run["created_at"]).days > 90:
             continue
@@ -152,7 +167,13 @@ def get_docker_image_analysis(github_token, github_actor):
         ) or "cuda" not in tag:
             continue
         docker_image = ""
-        for key in ("autoware-core", "autoware-universe", "prebuilt", "devel", "runtime"):
+        for key in (
+            "autoware-core",
+            "autoware-universe",
+            "prebuilt",
+            "devel",
+            "runtime",
+        ):
             if key in tag:
                 docker_image = (
                     key
@@ -184,14 +205,15 @@ def get_docker_image_analysis(github_token, github_actor):
 
 
 def export_to_json(
-    workflow_runs,
-    workflow_runs_self_hosted,
+    health_check,
+    health_check_self_hosted,
+    docker_build_and_push,
     package_duration_logs,
     docker_images,
 ):
-    def _export_to_json(workflow_runs):
+    def _export_to_json(workflow):
         json_data = []
-        for run in workflow_runs:
+        for run in workflow:
             # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
             cuda_job = None
             no_cuda_job = None
@@ -221,10 +243,11 @@ def export_to_json(
 
     json_data = {
         "workflow_time": {
-            "health-check": _export_to_json(workflow_runs),
+            "health-check": _export_to_json(health_check),
             "health-check-self-hosted": _export_to_json(
-                workflow_runs_self_hosted
+                health_check_self_hosted
             ),
+            "docker-build-and-push": _export_to_json(docker_build_and_push),
         },
         "docker_images": docker_images,
     }
@@ -252,14 +275,17 @@ if __name__ == "__main__":
     github_token = args.github_token
     github_actor = args.github_actor
 
-    workflow_runs, workflow_runs_self_hosted = get_workflow_runs(
-        github_token, datetime(2024, 1, 1)
-    )
+    (
+        health_check,
+        health_check_self_hosted,
+        docker_build_and_push,
+    ) = get_workflow_runs(github_token, datetime(2024, 1, 1))
     package_duration_logs = get_package_duration_logs(github_token)
     docker_images = get_docker_image_analysis(github_token, github_actor)
     json_data = export_to_json(
-        workflow_runs,
-        workflow_runs_self_hosted,
+        health_check,
+        health_check_self_hosted,
+        docker_build_and_push,
         package_duration_logs,
         docker_images,
     )
