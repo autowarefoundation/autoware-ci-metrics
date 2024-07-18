@@ -69,17 +69,17 @@ def get_workflow_runs(github_token, date_threshold):
 
     # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
     health_check = [
-        item for item in health_check if 60 * 10 < item["duration"] < 3600 * 10
+        item for item in health_check if 60 * 3 < item["duration"] < 3600 * 10
     ]
     health_check_self_hosted = [
         item
         for item in health_check_self_hosted
-        if 60 * 10 < item["duration"] < 3600 * 10
+        if 60 * 3 < item["duration"] < 3600 * 10
     ]
     docker_build_and_push = [
         item
         for item in docker_build_and_push
-        if 60 * 10 < item["duration"] < 3600 * 10
+        if 60 * 3 < item["duration"] < 3600 * 10
     ]
     return health_check, health_check_self_hosted, docker_build_and_push
 
