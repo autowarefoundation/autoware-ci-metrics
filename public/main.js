@@ -185,99 +185,99 @@ fetch('github_action_data.json')
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
-        {
-          name: 'autoware-core-arm64',
-          data: json.docker_images['autoware-core-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'autoware-universe-arm64',
-          data: json.docker_images['autoware-universe-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          // Obsolete
-          name: 'prebuilt-arm64',
-          data: json.docker_images['prebuilt-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'devel-arm64',
-          data: json.docker_images['devel-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'runtime-arm64',
-          data: json.docker_images['runtime-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'autoware-core-cuda-amd64',
-          data: json.docker_images['autoware-core-cuda-amd64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'autoware-universe-cuda-amd64',
-          data: json.docker_images['autoware-universe-cuda-amd64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          // Obsolete
-          name: 'prebuilt-cuda-amd64',
-          data: json.docker_images['prebuilt-cuda-amd64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'devel-cuda-amd64',
-          data: json.docker_images['devel-cuda-amd64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'runtime-cuda-amd64',
-          data: json.docker_images['runtime-cuda-amd64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'autoware-core-cuda-arm64',
-          data: json.docker_images['autoware-core-cuda-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'autoware-universe-cuda-arm64',
-          data: json.docker_images['autoware-universe-cuda-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          // Obsolete
-          name: 'prebuilt-cuda-arm64',
-          data: json.docker_images['prebuilt-cuda-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'devel-cuda-arm64',
-          data: json.docker_images['devel-cuda-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'runtime-cuda-arm64',
-          data: json.docker_images['runtime-cuda-arm64'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
+        // {
+        //   name: 'autoware-core-arm64',
+        //   data: json.docker_images['autoware-core-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'autoware-universe-arm64',
+        //   data: json.docker_images['autoware-universe-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   // Obsolete
+        //   name: 'prebuilt-arm64',
+        //   data: json.docker_images['prebuilt-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'devel-arm64',
+        //   data: json.docker_images['devel-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'runtime-arm64',
+        //   data: json.docker_images['runtime-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'autoware-core-cuda-amd64',
+        //   data: json.docker_images['autoware-core-cuda-amd64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'autoware-universe-cuda-amd64',
+        //   data: json.docker_images['autoware-universe-cuda-amd64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   // Obsolete
+        //   name: 'prebuilt-cuda-amd64',
+        //   data: json.docker_images['prebuilt-cuda-amd64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'devel-cuda-amd64',
+        //   data: json.docker_images['devel-cuda-amd64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'runtime-cuda-amd64',
+        //   data: json.docker_images['runtime-cuda-amd64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'autoware-core-cuda-arm64',
+        //   data: json.docker_images['autoware-core-cuda-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'autoware-universe-cuda-arm64',
+        //   data: json.docker_images['autoware-universe-cuda-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   // Obsolete
+        //   name: 'prebuilt-cuda-arm64',
+        //   data: json.docker_images['prebuilt-cuda-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'devel-cuda-arm64',
+        //   data: json.docker_images['devel-cuda-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
+        // {
+        //   name: 'runtime-cuda-arm64',
+        //   data: json.docker_images['runtime-cuda-arm64'].map((data) => {
+        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+        //   }),
+        // },
       ],
       chart: {
         height: 500,
