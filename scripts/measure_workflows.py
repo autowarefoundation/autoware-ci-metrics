@@ -144,6 +144,16 @@ def get_docker_image_analysis(github_token, github_actor):
         dxf.authenticate(github_actor, github_token, response=response)
 
     docker_images = {
+        "autoware-core-amd64": [],
+        "autoware-universe-amd64": [],
+        "prebuilt-amd64": [],  # Obsolete
+        "devel-amd64": [],
+        "runtime-amd64": [],
+        "autoware-core-arm64": [],
+        "autoware-universe-arm64": [],
+        "prebuilt-arm64": [],  # Obsolete
+        "devel-arm64": [],
+        "runtime-arm64": [],
         "autoware-core-cuda-amd64": [],
         "autoware-universe-cuda-amd64": [],
         "prebuilt-cuda-amd64": [],  # Obsolete
@@ -162,9 +172,7 @@ def get_docker_image_analysis(github_token, github_actor):
         if tag_count == 0:
             continue
         tag = package["metadata"]["container"]["tags"][0]
-        if (
-            not tag.endswith("amd64") and not tag.endswith("arm64")
-        ) or "cuda" not in tag:
+        if not tag.endswith("amd64") and not tag.endswith("arm64"):
             continue
         docker_image = ""
         for key in (
@@ -177,7 +185,7 @@ def get_docker_image_analysis(github_token, github_actor):
             if key in tag:
                 docker_image = (
                     key
-                    + "-cuda-"
+                    + ("-cuda-" if "cuda" in tag else "-")
                     + ("amd64" if tag.endswith("amd64") else "arm64")
                 )
                 break
