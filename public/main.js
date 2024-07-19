@@ -155,6 +155,68 @@ fetch('github_action_data.json')
     const dockerOptions = {
       series: [
         {
+          name: 'autoware-core-amd64',
+          data: json.docker_images['autoware-core-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'autoware-universe-amd64',
+          data: json.docker_images['autoware-universe-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          // Obsolete
+          name: 'prebuilt-amd64',
+          data: json.docker_images['prebuilt-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'devel-amd64',
+          data: json.docker_images['devel-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'runtime-amd64',
+          data: json.docker_images['runtime-amd64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'autoware-core-arm64',
+          data: json.docker_images['autoware-core-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'autoware-universe-arm64',
+          data: json.docker_images['autoware-universe-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          // Obsolete
+          name: 'prebuilt-arm64',
+          data: json.docker_images['prebuilt-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'devel-arm64',
+          data: json.docker_images['devel-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'runtime-arm64',
+          data: json.docker_images['runtime-arm64'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
           name: 'autoware-core-cuda-amd64',
           data: json.docker_images['autoware-core-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
