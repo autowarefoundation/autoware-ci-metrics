@@ -153,6 +153,7 @@ def get_docker_image_analysis(github_token, github_actor):
         "devel-amd64": [],
         "runtime-amd64": [],
         "base-arm64": [],
+        "autoware-core-arm64": [],
         "autoware-universe-arm64": [],
         "devel-arm64": [],
         "runtime-arm64": [],
