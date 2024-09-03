@@ -182,7 +182,6 @@ def get_docker_image_analysis(github_token, github_actor):
             "base",
             "autoware-core",
             "autoware-universe",
-            "prebuilt",
             "devel",
             "runtime",
         ):
