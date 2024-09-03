@@ -144,24 +144,23 @@ def get_docker_image_analysis(github_token, github_actor):
         dxf.authenticate(github_actor, github_token, response=response)
 
     docker_images = {
+        "base-amd64": [],
         "autoware-core-amd64": [],
         "autoware-universe-amd64": [],
-        "prebuilt-amd64": [],  # Obsolete
         "devel-amd64": [],
         "runtime-amd64": [],
-        "autoware-core-arm64": [],
+        "base-arm64": [],
         "autoware-universe-arm64": [],
-        "prebuilt-arm64": [],  # Obsolete
         "devel-arm64": [],
         "runtime-arm64": [],
+        "base-cuda-amd64": [],
         "autoware-core-cuda-amd64": [],
         "autoware-universe-cuda-amd64": [],
-        "prebuilt-cuda-amd64": [],  # Obsolete
         "devel-cuda-amd64": [],
         "runtime-cuda-amd64": [],
+        "base-cuda-arm64": [],
         "autoware-core-cuda-arm64": [],
         "autoware-universe-cuda-arm64": [],
-        "prebuilt-cuda-arm64": [],  # Obsolete
         "devel-cuda-arm64": [],
         "runtime-cuda-arm64": [],
     }
@@ -176,6 +175,7 @@ def get_docker_image_analysis(github_token, github_actor):
             continue
         docker_image = ""
         for key in (
+            "base",
             "autoware-core",
             "autoware-universe",
             "prebuilt",
