@@ -170,61 +170,133 @@ fetch('github_action_data.json')
       series: [
         {
           name: 'base',
-          data: json.docker_images['base-amd64'].map((data) => {
+          data: json.docker_images['base'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-core',
-          data: json.docker_images['autoware-core-amd64'].map((data) => {
+          name: 'core',
+          data: json.docker_images['core'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-universe',
-          data: json.docker_images['autoware-universe-amd64'].map((data) => {
+          name: 'core-devel',
+          data: json.docker_images['core-devel'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'devel',
-          data: json.docker_images['devel-amd64'].map((data) => {
+          name: 'universe-sensing-perception',
+          data: json.docker_images['universe-sensing-perception'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'runtime',
-          data: json.docker_images['runtime-amd64'].map((data) => {
+          name: 'universe-sensing-perception-devel',
+          data: json.docker_images['universe-sensing-perception-devel'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-localization-mapping',
+          data: json.docker_images['universe-localization-mapping'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-localization-mapping-devel',
+          data: json.docker_images['universe-localization-mapping-devel'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-planning-control',
+          data: json.docker_images['universe-planning-control'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-planning-control-devel',
+          data: json.docker_images['universe-planning-control-devel'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe',
+          data: json.docker_images['universe'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-devel',
+          data: json.docker_images['universe-devel'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
           name: 'base-cuda',
-          data: json.docker_images['base-cuda-amd64'].map((data) => {
+          data: json.docker_images['base-cuda'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-core-cuda',
-          data: json.docker_images['autoware-core-cuda-amd64'].map((data) => {
+          name: 'core-cuda',
+          data: json.docker_images['core-cuda'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-universe-cuda',
-          data: json.docker_images['autoware-universe-cuda-amd64'].map((data) => {
+          name: 'core-devel-cuda',
+          data: json.docker_images['core-devel-cuda'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'devel-cuda',
-          data: json.docker_images['devel-cuda-amd64'].map((data) => {
+          name: 'universe-sensing-perception-cuda',
+          data: json.docker_images['universe-sensing-perception-cuda'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'runtime-cuda',
-          data: json.docker_images['runtime-cuda-amd64'].map((data) => {
+          name: 'universe-sensing-perception-devel-cuda',
+          data: json.docker_images['universe-sensing-perception-devel-cuda'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-localization-mapping-cuda',
+          data: json.docker_images['universe-localization-mapping-cuda'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-localization-mapping-devel-cuda',
+          data: json.docker_images['universe-localization-mapping-devel-cuda'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-planning-control-cuda',
+          data: json.docker_images['universe-planning-control-cuda'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-planning-control-devel-cuda',
+          data: json.docker_images['universe-planning-control-devel-cuda'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-cuda',
+          data: json.docker_images['universe-cuda'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-devel-cuda',
+          data: json.docker_images['universe-devel-cuda'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
