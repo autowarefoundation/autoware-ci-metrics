@@ -234,51 +234,6 @@ fetch('github_action_data.json')
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
-      ],
-      chart: {
-        height: 500,
-        type: 'line',
-        zoom: {
-          enabled: true,
-        },
-      },
-      dataLabels: {
-        enabled: false,
-      },
-      title: {
-        text: 'Docker Image Size',
-        align: 'left',
-      },
-      xaxis: {
-        type: 'datetime',
-      },
-      yaxis: {
-        min: 0,
-        labels: {
-          formatter: (val) => `${val.toFixed(2)}GB`,
-        },
-        title: {
-          text: 'Size',
-        },
-      },
-      tooltip: {
-        y: {
-          formatter: function (val) {
-            return `${val.toFixed(2)}GB`;
-          },
-        },
-      },
-    };
-
-    const dockerChart = new ApexCharts(
-      document.querySelector('#docker-chart'),
-      dockerOptions,
-    );
-    dockerChart.render();
-  });
-
-    const dockerCudaOptions = {
-      series: [
         {
           name: 'base-cuda',
           data: json.docker_images['base-cuda'].map((data) => {
@@ -381,9 +336,9 @@ fetch('github_action_data.json')
       },
     };
 
-    const dockerCudaChart = new ApexCharts(
-      document.querySelector('#docker-cuda-chart'),
-      dockerCudaOptions,
+    const dockerChart = new ApexCharts(
+      document.querySelector('#docker-chart'),
+      dockerOptions,
     );
-    dockerCudaChart.render();
+    dockerChart.render();
   });
