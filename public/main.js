@@ -275,6 +275,7 @@ fetch('github_action_data.json')
       dockerOptions,
     );
     dockerChart.render();
+  });
 
     const dockerCudaOptions = {
       series: [
