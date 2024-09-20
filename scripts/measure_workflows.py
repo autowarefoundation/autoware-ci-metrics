@@ -164,16 +164,28 @@ def get_docker_image_analysis(github_token, github_actor):
         dxf.authenticate(github_actor, github_token, response=response)
 
     docker_images = {
-        "base-amd64": [],
-        "autoware-core-amd64": [],
-        "autoware-universe-amd64": [],
-        "devel-amd64": [],
-        "runtime-amd64": [],
-        "base-cuda-amd64": [],
-        "autoware-core-cuda-amd64": [],
-        "autoware-universe-cuda-amd64": [],
-        "devel-cuda-amd64": [],
-        "runtime-cuda-amd64": [],
+        "base": [],
+        "core": [],
+        "core-devel": [],
+        "universe-sensing-perception": [],
+        "universe-sensing-perception-devel": [],
+        "universe-localization-mapping": [],
+        "universe-localization-mapping-devel": [],
+        "universe-planning-control": [],
+        "universe-planning-control-devel": [],
+        "universe": [],
+        "universe-devel": [],
+        "base-cuda": [],
+        "core-cuda": [],
+        "core-devel-cuda": [],
+        "universe-sensing-perception-cuda": [],
+        "universe-sensing-perception-devel-cuda": [],
+        "universe-localization-mapping-cuda": [],
+        "universe-localization-mapping-devel-cuda": [],
+        "universe-planning-control-cuda": [],
+        "universe-planning-control-devel-cuda": [],
+        "universe-cuda": [],
+        "universe-devel-cuda": [],
     }
 
     dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
@@ -185,20 +197,54 @@ def get_docker_image_analysis(github_token, github_actor):
         if not tag.endswith("amd64"):
             continue
         docker_image = ""
-        for key in (
-            "base",
-            "autoware-core",
-            "autoware-universe",
-            "devel",
-            "runtime",
-        ):
-            if key in tag:
-                docker_image = (
-                    key
-                    + ("-cuda-" if "cuda" in tag else "-")
-                    + "amd64"
-                )
-                break
+        if "autoware-" in tag:
+            for key in (
+                "autoware-core",
+                "autoware-universe",
+            ):
+                if key in tag:
+                    docker_image = (
+                        ("core-devel" if "core" in tag else "universe-devel")
+                        + ("-cuda" if "cuda" in tag else "")
+                    )
+                    break
+        else:
+            matched = False
+            for key in ("universe-sensing-perception",
+                        "universe-localization-mapping",
+                        "universe-planning-control"):
+                if key in tag:
+                    docker_image = (
+                        key
+                        + ("-devel" if "devel" in tag else "")
+                        + ("-cuda" if "cuda" in tag else "")
+                    )
+                    matched = True
+                    break
+            if not matched:
+                if "universe" in tag:
+                    docker_image = (
+                        "universe"
+                        + ("-devel" if "devel" in tag else "")
+                        + ("-cuda" if "cuda" in tag else "")
+                    )
+                elif "core" in tag:
+                    docker_image = (
+                        "core"
+                        + ("-devel" if "devel" in tag else "")
+                        + ("-cuda" if "cuda" in tag else "")
+                    )
+                elif "base" in tag:
+                    docker_image = (
+                        "base"
+                        + ("-cuda" if "cuda" in tag else "")
+                    )
+                elif "runtime" in tag:
+                    docker_image = (
+                        "universe"
+                        + ("-cuda" if "cuda" in tag else "")
+                    )
+        print(docker_image)
         if docker_image == "":
             continue
 
