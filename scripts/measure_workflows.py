@@ -239,11 +239,6 @@ def get_docker_image_analysis(github_token, github_actor):
                         "base"
                         + ("-cuda" if "cuda" in tag else "")
                     )
-                elif "devel" in tag:
-                    docker_image = (
-                        "universe-devel"
-                        + ("-cuda" if "cuda" in tag else "")
-                    )
                 elif "runtime" in tag:
                     docker_image = (
                         "universe"
