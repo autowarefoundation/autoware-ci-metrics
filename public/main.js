@@ -7,6 +7,8 @@ fetch('github_action_data.json')
       (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
     const dockerBuildAndPush = json.workflow_time["docker-build-and-push"].filter(
       (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
+    const dockerBuildAndPushSelfHosted = json.workflow_time["docker-build-and-push-self-hosted"].filter(
+      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
 
     // Build duration chart
     const healthCheckTimeOptions = {
@@ -100,6 +102,18 @@ fetch('github_action_data.json')
             return [new Date(data.date), data.jobs['cuda'] / 3600.0];
           }),
         },
+        {
+          name: 'docker-build-and-push-arm64 (no-cuda)',
+          data: dockerBuildAndPushSelfHosted.map((data) => {
+            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
+          }),
+        },
+        {
+          name: 'docker-build-and-push-arm64 (cuda)',
+          data: dockerBuildAndPushSelfHosted.map((data) => {
+            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
+          }),
+        },
       ],
       chart: {
         height: 500,
@@ -155,61 +169,61 @@ fetch('github_action_data.json')
     const dockerOptions = {
       series: [
         {
-          name: 'base-amd64',
+          name: 'base',
           data: json.docker_images['base-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-core-amd64',
+          name: 'autoware-core',
           data: json.docker_images['autoware-core-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-universe-amd64',
+          name: 'autoware-universe',
           data: json.docker_images['autoware-universe-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'devel-amd64',
+          name: 'devel',
           data: json.docker_images['devel-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'runtime-amd64',
+          name: 'runtime',
           data: json.docker_images['runtime-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'base-cuda-amd64',
+          name: 'base-cuda',
           data: json.docker_images['base-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-core-cuda-amd64',
+          name: 'autoware-core-cuda',
           data: json.docker_images['autoware-core-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'autoware-universe-cuda-amd64',
+          name: 'autoware-universe-cuda',
           data: json.docker_images['autoware-universe-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'devel-cuda-amd64',
+          name: 'devel-cuda',
           data: json.docker_images['devel-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
         {
-          name: 'runtime-cuda-amd64',
+          name: 'runtime-cuda',
           data: json.docker_images['runtime-cuda-amd64'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
