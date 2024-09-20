@@ -224,8 +224,13 @@ def get_docker_image_analysis(github_token, github_actor):
             if not matched:
                 if "universe" in tag:
                     docker_image = (
-                        key
+                        "universe"
                         + ("-devel" if "devel" in tag else "")
+                        + ("-cuda" if "cuda" in tag else "")
+                    )
+                elif "base" in tag:
+                    docker_image = (
+                        "base"
                         + ("-cuda" if "cuda" in tag else "")
                     )
                 elif "devel" in tag:
