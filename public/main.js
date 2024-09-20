@@ -24,13 +24,13 @@ fetch('github_action_data.json')
           }),
         },
         {
-          name: 'health-check-self-hosted (no-cuda)',
+          name: 'health-check-arm64 (no-cuda)',
           data: healthCheckSelfHosted.map((data) => {
             return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
           }),
         },
         {
-          name: 'health-check-self-hosted (cuda)',
+          name: 'health-check-arm64 (cuda)',
           data: healthCheckSelfHosted.map((data) => {
             return [new Date(data.date), data.jobs['cuda'] / 3600.0];
           }),
@@ -184,36 +184,6 @@ fetch('github_action_data.json')
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
-        // {
-        //   name: 'base-arm64',
-        //   data: json.docker_images['base-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'autoware-core-arm64',
-        //   data: json.docker_images['autoware-core-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'autoware-universe-arm64',
-        //   data: json.docker_images['autoware-universe-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'devel-arm64',
-        //   data: json.docker_images['devel-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'runtime-arm64',
-        //   data: json.docker_images['runtime-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
         {
           name: 'base-cuda-amd64',
           data: json.docker_images['base-cuda-amd64'].map((data) => {
@@ -244,36 +214,6 @@ fetch('github_action_data.json')
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
-        // {
-        //   name: 'base-cuda-arm64',
-        //   data: json.docker_images['base-cuda-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'autoware-core-cuda-arm64',
-        //   data: json.docker_images['autoware-core-cuda-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'autoware-universe-cuda-arm64',
-        //   data: json.docker_images['autoware-universe-cuda-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'devel-cuda-arm64',
-        //   data: json.docker_images['devel-cuda-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
-        // {
-        //   name: 'runtime-cuda-arm64',
-        //   data: json.docker_images['runtime-cuda-arm64'].map((data) => {
-        //     return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-        //   }),
-        // },
       ],
       chart: {
         height: 500,

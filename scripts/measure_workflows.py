@@ -152,21 +152,11 @@ def get_docker_image_analysis(github_token, github_actor):
         "autoware-universe-amd64": [],
         "devel-amd64": [],
         "runtime-amd64": [],
-        "base-arm64": [],
-        "autoware-core-arm64": [],
-        "autoware-universe-arm64": [],
-        "devel-arm64": [],
-        "runtime-arm64": [],
         "base-cuda-amd64": [],
         "autoware-core-cuda-amd64": [],
         "autoware-universe-cuda-amd64": [],
         "devel-cuda-amd64": [],
         "runtime-cuda-amd64": [],
-        "base-cuda-arm64": [],
-        "autoware-core-cuda-arm64": [],
-        "autoware-universe-cuda-arm64": [],
-        "devel-cuda-arm64": [],
-        "runtime-cuda-arm64": [],
     }
 
     dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
@@ -175,7 +165,7 @@ def get_docker_image_analysis(github_token, github_actor):
         if tag_count == 0:
             continue
         tag = package["metadata"]["container"]["tags"][0]
-        if not tag.endswith("amd64") and not tag.endswith("arm64"):
+        if not tag.endswith("amd64"):
             continue
         docker_image = ""
         for key in (
@@ -189,7 +179,7 @@ def get_docker_image_analysis(github_token, github_actor):
                 docker_image = (
                     key
                     + ("-cuda-" if "cuda" in tag else "-")
-                    + ("amd64" if tag.endswith("amd64") else "arm64")
+                    + "amd64"
                 )
                 break
         if docker_image == "":
