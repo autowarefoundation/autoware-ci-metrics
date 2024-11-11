@@ -241,18 +241,6 @@ fetch('github_action_data.json')
           }),
         },
         {
-          name: 'core-cuda',
-          data: json.docker_images['core-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'core-devel-cuda',
-          data: json.docker_images['core-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
           name: 'universe-sensing-perception-cuda',
           data: json.docker_images['universe-sensing-perception-cuda'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
@@ -261,30 +249,6 @@ fetch('github_action_data.json')
         {
           name: 'universe-sensing-perception-devel-cuda',
           data: json.docker_images['universe-sensing-perception-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-localization-mapping-cuda',
-          data: json.docker_images['universe-localization-mapping-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-localization-mapping-devel-cuda',
-          data: json.docker_images['universe-localization-mapping-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-planning-control-cuda',
-          data: json.docker_images['universe-planning-control-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-planning-control-devel-cuda',
-          data: json.docker_images['universe-planning-control-devel-cuda'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
