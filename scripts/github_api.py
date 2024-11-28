@@ -82,9 +82,11 @@ class GitHubWorkflowAPI:
 
         # By calling jobs API for each workflow run
         for index, run in enumerate(workflow_runs):
-            jobs = requests.get(run["jobs_url"], headers=self.headers).json()[
-                "jobs"
-            ]
+            json_response = requests.get(run["jobs_url"], headers=self.headers).json()
+            if "jobs" not in json_response:
+                print(f"Error in fetching jobs from {run["jobs_url"]}: {json_response}")
+                continue
+            jobs = json_response["jobs"]
 
             run["jobs"] = {}
             run["duration"] = 0
