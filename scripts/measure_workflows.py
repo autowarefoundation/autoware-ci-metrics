@@ -263,8 +263,8 @@ def get_docker_image_analysis(github_token, github_actor):
                 manifest = manifest["linux/amd64"]
             elif arch is "arm64":
                 manifest = manifest["linux/arm64"]
-           else:
-               continue
+            else:
+                continue
         metadata = json.loads(manifest)
 
         total_size = sum([layer["size"] for layer in metadata["layers"]])
