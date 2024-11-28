@@ -191,10 +191,15 @@ def get_docker_image_analysis(github_token, github_actor):
     dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
     for package in packages:
         tag_count = len(package["metadata"]["container"]["tags"])
+        arch = "amd64"
         if tag_count == 0:
             continue
         tag = package["metadata"]["container"]["tags"][0]
-        if not tag.endswith("amd64"):
+        if tag.endswith("amd64"):
+            arch = "amd64"
+        elif tag.endswith("arm64"):
+            arch = "arm64"
+        else:
             continue
         docker_image = ""
         if "autoware-" in tag:
@@ -253,9 +258,14 @@ def get_docker_image_analysis(github_token, github_actor):
         if manifest is None:
             print(f"Failed to fetch manifest for {tag}")
             continue
-        metadata = json.loads(
-            (manifest["linux/amd64"] if type(manifest) is dict else manifest)
-        )
+        if type(manifest) is dict:
+            if arch is "amd64":
+                manifest = manifest["linux/amd64"]
+            elif arch is "arm64":
+                manifest = manifest["linux/arm64"]
+           else:
+               continue
+        metadata = json.loads(manifest)
 
         total_size = sum([layer["size"] for layer in metadata["layers"]])
         docker_images[docker_image].append(
