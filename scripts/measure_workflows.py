@@ -259,9 +259,9 @@ def get_docker_image_analysis(github_token, github_actor):
             print(f"Failed to fetch manifest for {tag}")
             continue
         if type(manifest) is dict:
-            if arch is "amd64":
+            if arch == "amd64":
                 manifest = manifest["linux/amd64"]
-            elif arch is "arm64":
+            elif arch == "arm64":
                 manifest = manifest["linux/arm64"]
             else:
                 continue
