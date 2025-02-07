@@ -27,6 +27,8 @@ BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
     "_Build 'Autoware'.txt",
+    "_Build 'Autoware' without CUDA.txt",
+    "_Build 'Autoware' with CUDA.txt",
 ]
 DOCKER_ORGS = "autowarefoundation"
 DOCKER_IMAGE = "autoware"
@@ -128,7 +130,7 @@ def get_package_duration_logs(github_token):
         for log in logs.keys():
             if any([log_id in log for log_id in BUILD_LOG_IDS]):
                 print(log)
-                build_log_text = logs[log]
+                build_log_text += logs[log]
                 break
         if build_log_text == "":
             print(f"Log for run_id={run['id']} not found.")
