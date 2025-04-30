@@ -10,11 +10,6 @@ from dxf import DXF
 REPO = "autowarefoundation/autoware"
 HEALTH_CHECK_WORKFLOW_ID = "health-check.yaml"
 DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = "docker-build-and-push.yaml"
-BUILD_LOG_IDS = [
-    "_Build.txt",
-    "_Build 'autoware-universe'.txt",
-    "_Build 'Autoware'.txt",
-]
 DOCKER_ORGS = "autowarefoundation"
 DOCKER_IMAGE = "autoware"
 CACHE_DIR = "./cache/"
@@ -63,58 +58,6 @@ def get_workflow_runs(github_token, date_threshold):
     return health_check, docker_build_and_push
 
 
-def get_package_duration_logs(github_token):
-    workflow_api = github_api.GitHubWorkflowAPI(github_token)
-    package_duration_logs = {}
-
-    # Fetch logs
-    # Log may be removed, so handling 404 error is necessary
-    for run in health_check:
-        # older than 90 days
-        if (datetime.now() - run["created_at"]).days > 90:
-            continue
-
-        try:
-            logs = try_cache(
-                f"{REPO}-{run['id']}",
-                lambda: workflow_api.get_workflow_logs(REPO, run["id"]),
-            )
-        except Exception as e:
-            print(f"Log for run_id={run['id']} cannot be fetched. {e}")
-            continue
-
-        build_log_text = ""
-        for log in logs.keys():
-            if any([log_id in log for log_id in BUILD_LOG_IDS]):
-                print(log)
-                build_log_text = logs[log]
-                break
-        if build_log_text == "":
-            print(f"Log for run_id={run['id']} not found.")
-            continue
-
-        analyzer = ColconLogAnalyzer(build_log_text)
-        package_duration_list = analyzer.get_build_duration_list()
-
-        # Sort by duration
-        package_duration_list = sorted(
-            package_duration_list, key=lambda k: -k[2]
-        )
-
-        # Into KV
-        package_duration_dict = {}
-
-        for package in package_duration_list:
-            package_duration_dict[package[0]] = package[2]
-
-        package_duration_logs[run["id"]] = {
-            "run_id": run["id"],
-            "date": run["created_at"],
-            "duration": package_duration_dict,
-        }
-    return package_duration_logs
-
-
 def get_docker_image_analysis(github_token, github_actor):
     package_api = github_api.GithubPackagesAPI(github_token)
     packages = package_api.get_all_containers(DOCKER_ORGS, DOCKER_IMAGE)
@@ -123,91 +66,61 @@ def get_docker_image_analysis(github_token, github_actor):
         dxf.authenticate(github_actor, github_token, response=response)
 
     docker_images = {
-        "base": [],
-        "core": [],
+        "core-common-devel": [],
         "core-devel": [],
-        "universe-sensing-perception": [],
+        "core": [],
+        "universe-common-devel": [],
         "universe-sensing-perception-devel": [],
-        "universe-localization-mapping": [],
-        "universe-localization-mapping-devel": [],
-        "universe-planning-control": [],
-        "universe-planning-control-devel": [],
-        "universe": [],
-        "universe-devel": [],
-        "base-cuda": [],
-        "core-cuda": [],
-        "core-devel-cuda": [],
-        "universe-sensing-perception-cuda": [],
         "universe-sensing-perception-devel-cuda": [],
-        "universe-localization-mapping-cuda": [],
-        "universe-localization-mapping-devel-cuda": [],
-        "universe-planning-control-cuda": [],
-        "universe-planning-control-devel-cuda": [],
-        "universe-cuda": [],
+        "universe-localization-mapping-devel": [],
+        "universe-planning-control-devel": [],
+        "universe-vehicle-system-devel": [],
+        "universe-sensing-perception": [],
+        "universe-sensing-perception-cuda": [],
+        "universe-localization-mapping": [],
+        "universe-planning-control": [],
+        "universe-vehicle-system": [],
+        "universe-devel": [],
         "universe-devel-cuda": [],
+        "universe": [],
+        "universe-cuda": [],
     }
 
     dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
     for package in packages:
         tag_count = len(package["metadata"]["container"]["tags"])
-        arch = "amd64"
         if tag_count == 0:
             continue
         tag = package["metadata"]["container"]["tags"][0]
-        if tag.endswith("amd64"):
-            arch = "amd64"
-        elif tag.endswith("arm64"):
-            arch = "arm64"
-        else:
-            continue
         docker_image = ""
-        if "autoware-" in tag:
-            for key in (
-                "autoware-core",
-                "autoware-universe",
-            ):
-                if key in tag:
-                    docker_image = (
-                        ("core-devel" if "core" in tag else "universe-devel")
-                        + ("-cuda" if "cuda" in tag else "")
-                    )
-                    break
-        else:
-            matched = False
-            for key in ("universe-sensing-perception",
-                        "universe-localization-mapping",
-                        "universe-planning-control"):
-                if key in tag:
-                    docker_image = (
-                        key
-                        + ("-devel" if "devel" in tag else "")
-                        + ("-cuda" if "cuda" in tag else "")
-                    )
-                    matched = True
-                    break
-            if not matched:
-                if "universe" in tag:
-                    docker_image = (
-                        "universe"
-                        + ("-devel" if "devel" in tag else "")
-                        + ("-cuda" if "cuda" in tag else "")
-                    )
-                elif "core" in tag:
-                    docker_image = (
-                        "core"
-                        + ("-devel" if "devel" in tag else "")
-                        + ("-cuda" if "cuda" in tag else "")
-                    )
-                elif "base" in tag:
-                    docker_image = (
-                        "base"
-                        + ("-cuda" if "cuda" in tag else "")
-                    )
-                elif "runtime" in tag:
-                    docker_image = (
-                        "universe"
-                        + ("-cuda" if "cuda" in tag else "")
-                    )
+        matched = False
+        for key in ("universe-sensing-perception",
+                    "universe-localization-mapping",
+                    "universe-planning-control",
+                    "universe-vehicle-system"):
+            if key in tag:
+                docker_image = (
+                    key
+                    + ("-devel" if "devel" in tag else "")
+                    + ("-cuda" if "cuda" in tag else "")
+                )
+                matched = True
+                break
+        if not matched:
+            if "universe" in tag:
+                docker_image = (
+                    "universe"
+                    + ("-common" if "common" in tag else "")
+                    + ("-devel" if "devel" in tag else "")
+                    + ("-cuda" if "cuda" in tag else "")
+                )
+            elif "core" in tag:
+                docker_image = (
+                    "core"
+                    + ("-common" if "common" in tag else "")
+                    + ("-devel" if "devel" in tag else "")
+                    + ("-cuda" if "cuda" in tag else "")
+                )
         print(docker_image)
         if docker_image == "":
             continue
@@ -218,29 +131,24 @@ def get_docker_image_analysis(github_token, github_actor):
             print(f"Failed to fetch manifest for {tag}")
             continue
         if type(manifest) is dict:
-            if arch == "amd64":
-                manifest = manifest["linux/amd64"]
-            elif arch == "arm64":
-                manifest = manifest["linux/arm64"]
-            else:
-                continue
+            manifest = manifest["linux/amd64"]
         metadata = json.loads(manifest)
 
         total_size = sum([layer["size"] for layer in metadata["layers"]])
-        docker_images[docker_image].append(
-            {
-                "size": total_size,
-                "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
-                "tag": tag,
-            }
-        )
+        if docker_image in docker_images:
+            docker_images[docker_image].append(
+                {
+                    "size": total_size,
+                    "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
+                    "tag": tag,
+                }
+            )
     return docker_images
 
 
 def export_to_json(
     health_check,
     docker_build_and_push,
-    package_duration_logs,
     docker_images,
 ):
     def _export_to_json(workflow):
@@ -266,9 +174,6 @@ def export_to_json(
                         "cuda": run["jobs"][cuda_job],
                         "no-cuda": run["jobs"][no_cuda_job],
                     },
-                    "details": package_duration_logs[run["id"]]["duration"]
-                    if run["id"] in package_duration_logs
-                    else None,
                 }
             )
         return json_data
