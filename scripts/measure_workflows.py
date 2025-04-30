@@ -8,21 +8,8 @@ from dxf import DXF
 
 # Constant
 REPO = "autowarefoundation/autoware"
-HEALTH_CHECK_WORKFLOW_ID = ["health-check.yaml", "build-main.yaml"]
-HEALTH_CHECK_SELF_HOSTED_WORKFLOW_ID = [
-    "health-check-arm64.yaml",
-    "health-check-self-hosted.yaml",
-    "build-main-self-hosted.yaml",
-]
-DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = [
-    "docker-build-and-push.yaml",
-    "docker-build-and-push-main.yaml",
-]
-DOCKER_BUILD_AND_PUSH_SELF_HOSTED_WORKFLOW_ID = [
-    "docker-build-and-push-arm64.yaml",
-    "docker-build-and-push-self-hosted.yaml",
-    "docker-build-and-push-main-self-hosted.yaml",
-]
+HEALTH_CHECK_WORKFLOW_ID = "health-check.yaml"
+DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = "docker-build-and-push.yaml"
 BUILD_LOG_IDS = [
     "_Build.txt",
     "_Build 'autoware-universe'.txt",
@@ -58,50 +45,22 @@ def get_workflow_runs(github_token, date_threshold):
 
     # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
     health_check = workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_WORKFLOW_ID[1], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_WORKFLOW_ID[0], True, date_threshold
-    )
-    health_check_self_hosted = workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_SELF_HOSTED_WORKFLOW_ID[2], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_SELF_HOSTED_WORKFLOW_ID[1], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_SELF_HOSTED_WORKFLOW_ID[0], True, date_threshold
+        REPO, HEALTH_CHECK_WORKFLOW_ID, True, date_threshold
     )
     docker_build_and_push = workflow_api.get_workflow_duration_list(
-        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID[1], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
-        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID[0], True, date_threshold
-    )
-    docker_build_and_push_self_hosted = workflow_api.get_workflow_duration_list(
-        REPO, DOCKER_BUILD_AND_PUSH_SELF_HOSTED_WORKFLOW_ID[2], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
-        REPO, DOCKER_BUILD_AND_PUSH_SELF_HOSTED_WORKFLOW_ID[1], True, date_threshold
-    ) + workflow_api.get_workflow_duration_list(
-        REPO, DOCKER_BUILD_AND_PUSH_SELF_HOSTED_WORKFLOW_ID[0], True, date_threshold
+        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID, True, date_threshold
     )
 
     # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
     health_check = [
         item for item in health_check if 60 * 3 < item["duration"] < 3600 * 10
     ]
-    health_check_self_hosted = [
-        item
-        for item in health_check_self_hosted
-        if 60 * 3 < item["duration"] < 3600 * 10
-    ]
     docker_build_and_push = [
         item
         for item in docker_build_and_push
         if 60 * 3 < item["duration"] < 3600 * 10
     ]
-    docker_build_and_push_self_hosted = [
-        item
-        for item in docker_build_and_push_self_hosted
-        if 60 * 3 < item["duration"] < 3600 * 10
-    ]
-    return health_check, health_check_self_hosted, docker_build_and_push, docker_build_and_push_self_hosted
+    return health_check, docker_build_and_push
 
 
 def get_package_duration_logs(github_token):
@@ -280,9 +239,7 @@ def get_docker_image_analysis(github_token, github_actor):
 
 def export_to_json(
     health_check,
-    health_check_self_hosted,
     docker_build_and_push,
-    docker_build_and_push_self_hosted,
     package_duration_logs,
     docker_images,
 ):
@@ -319,11 +276,7 @@ def export_to_json(
     json_data = {
         "workflow_time": {
             "health-check": _export_to_json(health_check),
-            "health-check-self-hosted": _export_to_json(
-                health_check_self_hosted
-            ),
             "docker-build-and-push": _export_to_json(docker_build_and_push),
-            "docker-build-and-push-self-hosted": _export_to_json(docker_build_and_push_self_hosted),
         },
         "docker_images": docker_images,
     }
@@ -353,17 +306,13 @@ if __name__ == "__main__":
 
     (
         health_check,
-        health_check_self_hosted,
         docker_build_and_push,
-        docker_build_and_push_self_hosted,
     ) = get_workflow_runs(github_token, datetime(2024, 1, 1))
     package_duration_logs = get_package_duration_logs(github_token)
     docker_images = get_docker_image_analysis(github_token, github_actor)
     json_data = export_to_json(
         health_check,
-        health_check_self_hosted,
         docker_build_and_push,
-        docker_build_and_push_self_hosted,
         package_duration_logs,
         docker_images,
     )
