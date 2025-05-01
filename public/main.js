@@ -171,12 +171,6 @@ fetch('github_action_data.json')
     const dockerOptions = {
       series: [
         {
-          name: 'base',
-          data: json.docker_images['base'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
           name: 'core',
           data: json.docker_images['core'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
@@ -185,6 +179,12 @@ fetch('github_action_data.json')
         {
           name: 'core-devel',
           data: json.docker_images['core-devel'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'core-common-devel',
+          data: json.docker_images['core-common-devel'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
@@ -237,8 +237,8 @@ fetch('github_action_data.json')
           }),
         },
         {
-          name: 'base-cuda',
-          data: json.docker_images['base-cuda'].map((data) => {
+          name: 'universe-common-devel',
+          data: json.docker_images['universe-common-devel'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
           }),
         },
