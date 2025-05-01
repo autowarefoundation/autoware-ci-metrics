@@ -80,6 +80,8 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
         "universe-localization-mapping": [],
         "universe-planning-control": [],
         "universe-vehicle-system": [],
+        "universe-visualization-devel": [],
+        "universe-visualization": [],
         "universe-devel": [],
         "universe-devel-cuda": [],
         "universe": [],
@@ -97,7 +99,8 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
         for key in ("universe-sensing-perception",
                     "universe-localization-mapping",
                     "universe-planning-control",
-                    "universe-vehicle-system"):
+                    "universe-vehicle-system",
+                    "universe-visualization"):
             if key in tag:
                 docker_image = (
                     key
