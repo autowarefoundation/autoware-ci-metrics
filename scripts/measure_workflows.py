@@ -164,11 +164,11 @@ def export_to_json(
             jobs = {}
             for job in run["jobs"]:
                 if "docker-build (main)" in job:
-                    jobs["main-amd64"] = job
+                    jobs["main-amd64"] = run["jobs"][job]
                 elif "docker-build (nightly)" in job:
-                    jobs["nightly-amd64"] = job
+                    jobs["nightly-amd64"] = run["jobs"][job]
                 elif "docker-build (main-arm64)" in job:
-                    jobs["main-arm64"] = job
+                    jobs["main-arm64"] = run["jobs"][job]
             if len(jobs) == 0:
                 continue
 
@@ -188,17 +188,17 @@ def export_to_json(
             jobs = {}
             for job in run["jobs"]:
                 if "docker-build-and-push (amd64)" in job:
-                    jobs["main-amd64"] = job
+                    jobs["main-amd64"] = run["jobs"][job]
                 elif "docker-build-and-push (arm64)" in job:
-                    jobs["main-arm64"] = job
+                    jobs["main-arm64"] = run["jobs"][job]
                 elif "docker-build-and-push-cuda (amd64)" in job:
-                    jobs["cuda-amd64"] = job
+                    jobs["cuda-amd64"] = run["jobs"][job]
                 elif "docker-build-and-push-cuda (arm64)" in job:
-                    jobs["cuda-arm64"] = job
+                    jobs["cuda-arm64"] = run["jobs"][job]
                 elif "docker-build-and-push-tools (amd64)" in job:
-                    jobs["tools-amd64"] = job
+                    jobs["tools-amd64"] = run["jobs"][job]
                 elif "docker-build-and-push-tools (arm64)" in job:
-                    jobs["tools-arm64"] = job
+                    jobs["tools-arm64"] = run["jobs"][job]
             if len(jobs) == 0:
                 continue
 
