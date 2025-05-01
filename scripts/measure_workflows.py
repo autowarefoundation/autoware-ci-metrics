@@ -1,6 +1,6 @@
 import argparse
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import github_api
 from colcon_log_analyzer import ColconLogAnalyzer
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     (
         health_check,
         docker_build_and_push,
-    ) = get_workflow_runs(github_token, datetime(2024, 1, 1))
+    ) = get_workflow_runs(github_token, datetime.now() - timedelta(days=180))
     docker_images = get_docker_image_analysis(github_token, github_actor)
     json_data = export_to_json(
         health_check,
