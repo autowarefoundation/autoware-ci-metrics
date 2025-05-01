@@ -87,7 +87,7 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
     }
 
     dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
-    for package in [p for p in packages if datetime.fromisoformat(p["updated_at"]) >= date_threshold]:
+    for package in [p for p in packages if p["updated_at"] >= date_threshold]:
         tag_count = len(package["metadata"]["container"]["tags"])
         if tag_count == 0:
             continue
