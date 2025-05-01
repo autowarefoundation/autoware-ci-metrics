@@ -1,10 +1,8 @@
 fetch('github_action_data.json')
   .then((res) => res.json())
   .then((json) => {
-    const healthCheck = json.workflow_time["health-check"].filter(
-      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
-    const dockerBuildAndPush = json.workflow_time["docker-build-and-push"].filter(
-      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
+    const healthCheck = json.workflow_time["health-check"];
+    const dockerBuildAndPush = json.workflow_time["docker-build-and-push"];
 
     // Build duration chart
     const healthCheckTimeOptions = {
