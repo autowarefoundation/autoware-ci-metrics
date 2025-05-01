@@ -58,7 +58,7 @@ def get_workflow_runs(github_token, date_threshold):
     return health_check, docker_build_and_push
 
 
-def get_docker_image_analysis(github_token, github_actor):
+def get_docker_image_analysis(github_token, github_actor, date_threshold):
     package_api = github_api.GithubPackagesAPI(github_token)
     packages = package_api.get_all_containers(DOCKER_ORGS, DOCKER_IMAGE)
 
@@ -87,7 +87,7 @@ def get_docker_image_analysis(github_token, github_actor):
     }
 
     dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
-    for package in packages:
+    for package in [p for p in packages if datetime.fromisoformat(p["created_at"].replace("Z", "+00:00")) >= date_threshold]:
         tag_count = len(package["metadata"]["container"]["tags"])
         if tag_count == 0:
             continue
@@ -258,11 +258,12 @@ if __name__ == "__main__":
     github_token = args.github_token
     github_actor = args.github_actor
 
+    date_threshold = datetime.now() - timedelta(days=180)
     (
         health_check,
         docker_build_and_push,
-    ) = get_workflow_runs(github_token, datetime.now() - timedelta(days=180))
-    docker_images = get_docker_image_analysis(github_token, github_actor)
+    ) = get_workflow_runs(github_token, date_threshold)
+    docker_images = get_docker_image_analysis(github_token, github_actor, date_threshold)
     json_data = export_to_json(
         health_check,
         docker_build_and_push,
