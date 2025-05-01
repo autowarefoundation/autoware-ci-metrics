@@ -126,7 +126,11 @@ def get_docker_image_analysis(github_token, github_actor):
             continue
 
         print(f"Fetching manifest for {tag}")
-        manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
+        try:
+            manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
+        except Exception as e:
+            print(f"Failed to fetch manifest for {tag}: {e}")
+            continue
         if manifest is None:
             print(f"Failed to fetch manifest for {tag}")
             continue
