@@ -151,18 +151,20 @@ def export_to_json(
     docker_build_and_push,
     docker_images,
 ):
-    def _export_to_json(workflow):
+    def _export_health_check_to_json(workflow):
         json_data = []
         for run in workflow:
-            # check run["jobs"] has "(cuda)" and "(no-cuda)" jobs
-            cuda_job = None
-            no_cuda_job = None
+            main_amd64_job = None
+            nightly_amd64_job = None
+            main_arm64_job = None
             for job in run["jobs"]:
-                if "(cuda)" in job:
-                    cuda_job = job
-                elif "(no-cuda)" in job:
-                    no_cuda_job = job
-            if cuda_job is None or no_cuda_job is None:
+                if "docker-build (main)" in job:
+                    main_amd64_job = job
+                elif "docker-build (nightly)" in job:
+                    nightly_amd64_job = job
+                elif "docker-build (main-arm64)" in job:
+                    main_arm64_job = job
+            if main_amd64_job is None or nightly_amd64_job is None or main_arm64_job is None:
                 continue
 
             json_data.append(
@@ -171,17 +173,22 @@ def export_to_json(
                     "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
                     "duration": run["duration"] / 3600,
                     "jobs": {
-                        "cuda": run["jobs"][cuda_job],
-                        "no-cuda": run["jobs"][no_cuda_job],
+                        "main-amd64": run["jobs"][main_amd64_job],
+                        "nightly-amd64": run["jobs"][nightly_amd64_job],
+                        "main-arm64": run["jobs"][main_arm64_job],
                     },
                 }
             )
         return json_data
 
+    def _export_docker_build_and_push_to_json(workflow):
+        json_data = []
+        return json_data
+
     json_data = {
         "workflow_time": {
-            "health-check": _export_to_json(health_check),
-            "docker-build-and-push": _export_to_json(docker_build_and_push),
+            "health-check": _export_health_check_to_json(health_check),
+            "docker-build-and-push": _export_docker_build_and_push_to_json(docker_build_and_push),
         },
         "docker_images": docker_images,
     }
@@ -213,12 +220,10 @@ if __name__ == "__main__":
         health_check,
         docker_build_and_push,
     ) = get_workflow_runs(github_token, datetime(2024, 1, 1))
-    package_duration_logs = get_package_duration_logs(github_token)
     docker_images = get_docker_image_analysis(github_token, github_actor)
     json_data = export_to_json(
         health_check,
         docker_build_and_push,
-        package_duration_logs,
         docker_images,
     )
 

@@ -3,38 +3,28 @@ fetch('github_action_data.json')
   .then((json) => {
     const healthCheck = json.workflow_time["health-check"].filter(
       (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
-    const healthCheckSelfHosted = json.workflow_time["health-check-self-hosted"].filter(
-      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
     const dockerBuildAndPush = json.workflow_time["docker-build-and-push"].filter(
-      (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
-    const dockerBuildAndPushSelfHosted = json.workflow_time["docker-build-and-push-self-hosted"].filter(
       (data) => 'no-cuda' in data.jobs && 'cuda' in data.jobs);
 
     // Build duration chart
     const healthCheckTimeOptions = {
       series: [
         {
-          name: 'health-check (no-cuda)',
+          name: 'main-amd64',
           data: healthCheck.map((data) => {
-            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
+            return [new Date(data.date), data.jobs['main-amd64'] / 3600.0];
           }),
         },
         {
-          name: 'health-check (cuda)',
+          name: 'main-arm64',
           data: healthCheck.map((data) => {
-            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
+            return [new Date(data.date), data.jobs['main-arm64'] / 3600.0];
           }),
         },
         {
-          name: 'health-check-arm64 (no-cuda)',
-          data: healthCheckSelfHosted.map((data) => {
-            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
-          }),
-        },
-        {
-          name: 'health-check-arm64 (cuda)',
-          data: healthCheckSelfHosted.map((data) => {
-            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
+          name: 'nightly-amd64',
+          data: healthCheck.map((data) => {
+            return [new Date(data.date), data.jobs['nightly-amd64'] / 3600.0];
           }),
         },
       ],
@@ -91,7 +81,7 @@ fetch('github_action_data.json')
     const dockerBuildAndPushTimeOptions = {
       series: [
         {
-          name: 'docker-build-and-push (no-cuda)',
+          name: 'docker-build-eand-push (no-cuda)',
           data: dockerBuildAndPush.map((data) => {
             return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
           }),
@@ -99,18 +89,6 @@ fetch('github_action_data.json')
         {
           name: 'docker-build-and-push (cuda)',
           data: dockerBuildAndPush.map((data) => {
-            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
-          }),
-        },
-        {
-          name: 'docker-build-and-push-arm64 (no-cuda)',
-          data: dockerBuildAndPushSelfHosted.map((data) => {
-            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
-          }),
-        },
-        {
-          name: 'docker-build-and-push-arm64 (cuda)',
-          data: dockerBuildAndPushSelfHosted.map((data) => {
             return [new Date(data.date), data.jobs['cuda'] / 3600.0];
           }),
         },
