@@ -161,17 +161,15 @@ def export_to_json(
     def _export_health_check_to_json(workflow):
         json_data = []
         for run in workflow:
-            main_amd64_job = None
-            nightly_amd64_job = None
-            main_arm64_job = None
+            jobs = {}
             for job in run["jobs"]:
                 if "docker-build (main)" in job:
-                    main_amd64_job = job
+                    jobs["main-amd64"] = job
                 elif "docker-build (nightly)" in job:
-                    nightly_amd64_job = job
+                    jobs["nightly-amd64"] = job
                 elif "docker-build (main-arm64)" in job:
-                    main_arm64_job = job
-            if main_amd64_job is None and nightly_amd64_job is None and main_arm64_job is None:
+                    jobs["main-arm64"] = job
+            if len(jobs) == 0:
                 continue
 
             json_data.append(
@@ -179,11 +177,7 @@ def export_to_json(
                     "run_id": run["id"],
                     "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
                     "duration": run["duration"] / 3600,
-                    "jobs": {
-                        "main-amd64": run["jobs"][main_amd64_job],
-                        "nightly-amd64": run["jobs"][nightly_amd64_job],
-                        "main-arm64": run["jobs"][main_arm64_job],
-                    },
+                    "jobs": jobs,
                 }
             )
         return json_data
@@ -191,26 +185,21 @@ def export_to_json(
     def _export_docker_build_and_push_to_json(workflow):
         json_data = []
         for run in workflow:
-            main_amd64_job = None
-            main_arm64_job = None
-            cuda_amd64_job = None
-            cuda_arm64_job = None
-            tools_amd64_job = None
-            tools_arm64_job = None
+            jobs = {}
             for job in run["jobs"]:
                 if "docker-build-and-push (amd64)" in job:
-                    main_amd64_job = job
+                    jobs["main-amd64"] = job
                 elif "docker-build-and-push (arm64)" in job:
-                    main_arm64_job = job
+                    jobs["main-arm64"] = job
                 elif "docker-build-and-push-cuda (amd64)" in job:
-                    cuda_amd64_job = job
+                    jobs["cuda-amd64"] = job
                 elif "docker-build-and-push-cuda (arm64)" in job:
-                    cuda_arm64_job = job
+                    jobs["cuda-arm64"] = job
                 elif "docker-build-and-push-tools (amd64)" in job:
-                    tools_amd64_job = job
+                    jobs["tools-amd64"] = job
                 elif "docker-build-and-push-tools (arm64)" in job:
-                    tools_arm64_job = job
-            if main_amd64_job is None and main_arm64_job is None and cuda_amd64_job is None and cuda_arm64_job is None and tools_amd64_job is None and tools_arm64_job is None:
+                    jobs["tools-arm64"] = job
+            if len(jobs) == 0:
                 continue
 
             json_data.append(
@@ -218,14 +207,7 @@ def export_to_json(
                     "run_id": run["id"],
                     "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
                     "duration": run["duration"] / 3600,
-                    "jobs": {
-                        "main-amd64": run["jobs"][main_amd64_job],
-                        "main-arm64": run["jobs"][main_arm64_job],
-                        "cuda-amd64": run["jobs"][cuda_amd64_job],
-                        "cuda-arm64": run["jobs"][cuda_arm64_job],
-                        "tools-amd64": run["jobs"][tools_amd64_job],
-                        "tools-arm64": run["jobs"][tools_arm64_job],
-                    },
+                    "jobs": jobs,
                 }
             )
         return json_data
