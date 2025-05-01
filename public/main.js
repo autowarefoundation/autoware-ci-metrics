@@ -225,6 +225,18 @@ fetch('github_action_data.json')
           }),
         },
         {
+          name: 'universe-visualization',
+          data: json.docker_images['universe-visualization'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-visualization-devel',
+          data: json.docker_images['universe-visualization-devel'].map((data) => {
+            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+          }),
+        },
+        {
           name: 'universe',
           data: json.docker_images['universe'].map((data) => {
             return [new Date(data.date), data.size / 1024 / 1024 / 1024];
