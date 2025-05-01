@@ -258,7 +258,7 @@ if __name__ == "__main__":
     github_token = args.github_token
     github_actor = args.github_actor
 
-    date_threshold = datetime.now() - timedelta(days=180)
+    date_threshold = datetime.now() - timedelta(days=90)
     (
         health_check,
         docker_build_and_push,
