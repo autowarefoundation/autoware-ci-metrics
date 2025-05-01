@@ -81,15 +81,39 @@ fetch('github_action_data.json')
     const dockerBuildAndPushTimeOptions = {
       series: [
         {
-          name: 'docker-build-eand-push (no-cuda)',
+          name: 'main-amd64',
           data: dockerBuildAndPush.map((data) => {
-            return [new Date(data.date), data.jobs['no-cuda'] / 3600.0];
+            return [new Date(data.date), data.jobs['main-amd64'] / 3600.0];
           }),
         },
         {
-          name: 'docker-build-and-push (cuda)',
+          name: 'main-arm64',
           data: dockerBuildAndPush.map((data) => {
-            return [new Date(data.date), data.jobs['cuda'] / 3600.0];
+            return [new Date(data.date), data.jobs['main-arm64'] / 3600.0];
+          }),
+        },
+        {
+          name: 'cuda-amd64',
+          data: dockerBuildAndPush.map((data) => {
+            return [new Date(data.date), data.jobs['cuda-amd64'] / 3600.0];
+          }),
+        },
+        {
+          name: 'cuda-arm64',
+          data: dockerBuildAndPush.map((data) => {
+            return [new Date(data.date), data.jobs['cuda-arm64'] / 3600.0];
+          }),
+        },
+        {
+          name: 'tools-amd64',
+          data: dockerBuildAndPush.map((data) => {
+            return [new Date(data.date), data.jobs['tools-amd64'] / 3600.0];
+          }),
+        },
+        {
+          name: 'tools-arm64',
+          data: dockerBuildAndPush.map((data) => {
+            return [new Date(data.date), data.jobs['tools-arm64'] / 3600.0];
           }),
         },
       ],
