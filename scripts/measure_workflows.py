@@ -131,7 +131,7 @@ def get_docker_image_analysis(github_token, github_actor):
             print(f"Failed to fetch manifest for {tag}")
             continue
         if type(manifest) is dict:
-            manifest = manifest["linux/amd64"]
+            manifest = list(manifest.values())[0]
         metadata = json.loads(manifest)
 
         total_size = sum([layer["size"] for layer in metadata["layers"]])
