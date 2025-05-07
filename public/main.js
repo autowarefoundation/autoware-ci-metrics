@@ -10,18 +10,21 @@ fetch('github_action_data.json')
         {
           name: 'main-amd64',
           data: healthCheck.map((data) => {
+            if (!data.jobs['main-amd64']) return null;
             return [new Date(data.date), data.jobs['main-amd64'] / 3600.0];
           }),
         },
         {
           name: 'main-arm64',
           data: healthCheck.map((data) => {
+            if (!data.jobs['main-arm64']) return null;
             return [new Date(data.date), data.jobs['main-arm64'] / 3600.0];
           }),
         },
         {
           name: 'nightly-amd64',
           data: healthCheck.map((data) => {
+            if (!data.jobs['nightly-amd64']) return null;
             return [new Date(data.date), data.jobs['nightly-amd64'] / 3600.0];
           }),
         },
@@ -81,36 +84,42 @@ fetch('github_action_data.json')
         {
           name: 'main-amd64',
           data: dockerBuildAndPush.map((data) => {
+            if (!data.jobs['main-amd64']) return null;
             return [new Date(data.date), data.jobs['main-amd64'] / 3600.0];
           }),
         },
         {
           name: 'main-arm64',
           data: dockerBuildAndPush.map((data) => {
+            if (!data.jobs['main-arm64']) return null;
             return [new Date(data.date), data.jobs['main-arm64'] / 3600.0];
           }),
         },
         {
           name: 'cuda-amd64',
           data: dockerBuildAndPush.map((data) => {
+            if (!data.jobs['cuda-amd64']) return null;
             return [new Date(data.date), data.jobs['cuda-amd64'] / 3600.0];
           }),
         },
         {
           name: 'cuda-arm64',
           data: dockerBuildAndPush.map((data) => {
+            if (!data.jobs['cuda-arm64']) return null;
             return [new Date(data.date), data.jobs['cuda-arm64'] / 3600.0];
           }),
         },
         {
           name: 'tools-amd64',
           data: dockerBuildAndPush.map((data) => {
+            if (!data.jobs['tools-amd64']) return null;
             return [new Date(data.date), data.jobs['tools-amd64'] / 3600.0];
           }),
         },
         {
           name: 'tools-arm64',
           data: dockerBuildAndPush.map((data) => {
+            if (!data.jobs['tools-arm64']) return null;
             return [new Date(data.date), data.jobs['tools-arm64'] / 3600.0];
           }),
         },
