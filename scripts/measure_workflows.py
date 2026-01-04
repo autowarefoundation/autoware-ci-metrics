@@ -144,8 +144,9 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
 
         total_size = sum([layer["size"] for layer in metadata["layers"]])
         if docker_image in docker_images:
-            subprocess.run(['docker', 'image', 'pull', docker_image])
-            output = subprocess.run(['docker', 'image', 'inspect', docker_image], capture_output=True, text=True)
+            docker_image_full = f"ghcr.io/{DOCKER_ORGS}/{DOCKER_IMAGE}:{tag}"
+            subprocess.run(['docker', 'image', 'pull', docker_image_full])
+            output = subprocess.run(['docker', 'image', 'inspect', docker_image_full], capture_output=True, text=True)
             size_uncompressed = json.loads(output.stdout)[0]['Size']
             docker_images[docker_image].append(
                 {
@@ -155,6 +156,7 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
                     "tag": tag,
                 }
             )
+            subprocess.run(['docker', 'system', 'prune', '--force', '--all'])
 
     return docker_images
 
