@@ -1,7 +1,6 @@
 import argparse
 import json
 from datetime import datetime, timedelta
-import subprocess
 
 import github_api
 from colcon_log_analyzer import ColconLogAnalyzer
@@ -144,18 +143,13 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
 
         total_size = sum([layer["size"] for layer in metadata["layers"]])
         if docker_image in docker_images:
-            subprocess.run(['docker', 'image', 'pull', docker_image])
-            output = subprocess.run(['docker', 'image', 'inspect', docker_image], capture_output=True, text=True)
-            size_uncompressed = json.loads(output.stdout)[0]['Size']
             docker_images[docker_image].append(
                 {
-                    "size_compressed": total_size,
-                    "size_uncompressed": size_uncompressed,
+                    "size": total_size,
                     "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
                     "tag": tag,
                 }
             )
-
     return docker_images
 
 
