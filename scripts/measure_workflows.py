@@ -146,9 +146,20 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
         if docker_image in docker_images:
             size_uncompressed = 0
 
-            # Skip download if it is an ARM image to save disk space and bandwidth
-            if "arm64" in tag:
-                print(f"Skipping docker pull for ARM image: {tag}")
+            # Only compute uncompressed size for selected images
+            UNCOMPRESSED_TARGETS = {
+                "universe-devel",
+                "universe-devel-cuda",
+                "core-devel",
+            }
+
+            skip_uncompressed = (
+                    any(x in tag for x in ("arm64", "jazzy"))
+                    or docker_image not in UNCOMPRESSED_TARGETS
+            )
+
+            if skip_uncompressed:
+                print(f"Skipping docker pull for uncompressed size: {tag}")
             else:
                 docker_image_full = f"ghcr.io/{DOCKER_ORGS}/{DOCKER_IMAGE}:{tag}"
 
