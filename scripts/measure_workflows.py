@@ -156,7 +156,6 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
                     "tag": tag,
                 }
             )
-            subprocess.run(['docker', 'system', 'prune', '--force', '--all'])
 
     return docker_images
 
