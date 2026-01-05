@@ -144,10 +144,25 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
 
         total_size = sum([layer["size"] for layer in metadata["layers"]])
         if docker_image in docker_images:
-            docker_image_full = f"ghcr.io/{DOCKER_ORGS}/{DOCKER_IMAGE}:{tag}"
-            subprocess.run(['docker', 'image', 'pull', docker_image_full])
-            output = subprocess.run(['docker', 'image', 'inspect', docker_image_full], capture_output=True, text=True)
-            size_uncompressed = json.loads(output.stdout)[0]['Size']
+            size_uncompressed = 0
+
+            # Skip download if it is an ARM image to save disk space and bandwidth
+            if "arm64" in tag:
+                print(f"Skipping docker pull for ARM image: {tag}")
+            else:
+                docker_image_full = f"ghcr.io/{DOCKER_ORGS}/{DOCKER_IMAGE}:{tag}"
+
+                print(f"Pulling {docker_image_full} ...")
+                subprocess.run(['docker', 'image', 'pull', docker_image_full])
+
+                print("--- Disk Space After Pull ---")
+                subprocess.run(['df', '-h', '/'])
+                print("-----------------------------")
+
+                output = subprocess.run(['docker', 'image', 'inspect', docker_image_full], capture_output=True,
+                                        text=True)
+                size_uncompressed = json.loads(output.stdout)[0]['Size']
+
             docker_images[docker_image].append(
                 {
                     "size_compressed": total_size,
