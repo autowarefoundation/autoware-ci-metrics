@@ -231,6 +231,11 @@ def main():
         default=OUTPUT_DIR,
         help="Output directory for JSON files",
     )
+    parser.add_argument(
+        "-n", "--dry-run",
+        action="store_true",
+        help="Perform a dry run without committing to the repository",
+    )
     args = parser.parse_args()
 
     print(f"Fetching Docker image sizes for {ORG}/{IMAGE}")
@@ -282,7 +287,10 @@ def main():
     print(f"Results saved to {output_path}")
 
     # Commit to git
-    git_commit_results(str(output_path))
+    if args.dry_run:
+        print("Dry run: Skipping git commit")
+    else:
+        git_commit_results(str(output_path))
 
 
 if __name__ == "__main__":
