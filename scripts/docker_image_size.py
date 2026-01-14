@@ -174,7 +174,7 @@ def get_uncompressed_size(image: str, tag: str) -> int:
     return 0
 
 
-def get_image_size(token: str, tag: str, username: str) -> dict:
+def get_image_size(token: str, tag: str) -> dict:
     """Get the compressed and uncompressed size of a Docker image."""
     try:
         # Get compressed size from registry manifest
