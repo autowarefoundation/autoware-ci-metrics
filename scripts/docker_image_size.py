@@ -15,24 +15,23 @@ OUTPUT_DIR = "data/docker_image_sizes"
 OUTPUT_FILE_TEMPLATE = "docker_image_sizes_{timestamp}.json"
 
 
-def get_auth_token() -> str:
+def get_auth_token(github_token: str = "") -> str:
     """Get authentication token from GitHub Container Registry.
 
-    If GITHUB_TOKEN is set, exchange it for a registry access token with pull scope.
+    If github_token is provided, exchange it for a registry access token with pull scope.
     Otherwise, request an anonymous token.
     """
     url = (
         f"{REGISTRY_URL}/token?service=ghcr.io"
         f"&scope=repository:{ORG}/{IMAGE}:pull"
     )
-    env_token = os.getenv("GITHUB_TOKEN")
     headers = {}
-    if env_token:
-        print("Using GITHUB_TOKEN for authentication")
-        headers["Authorization"] = f"Bearer {env_token}"
+    if github_token:
+        print("Exchanging GitHub token for registry access token")
+        headers["Authorization"] = f"Bearer {github_token}"
         headers["Accept"] = "application/json"
     else:
-        print("No GITHUB_TOKEN found, requesting anonymous token")
+        print("Requesting anonymous access token")
 
     response = requests.get(url, headers=headers, timeout=30)
     response.raise_for_status()
@@ -260,12 +259,18 @@ def main():
         action="store_true",
         help="Perform a dry run without committing to the repository",
     )
+    parser.add_argument(
+        "--github-token",
+        default="",
+        help="GitHub token for authentication (falls back to GITHUB_TOKEN env var)",
+    )
     args = parser.parse_args()
 
     print(f"Fetching Docker image sizes for {ORG}/{IMAGE}")
 
     try:
-        token = get_auth_token()
+        token_value = args.github_token or os.getenv("GITHUB_TOKEN", "")
+        token = get_auth_token(token_value)
     except Exception as e:
         print(f"Warning: Failed to get auth token: {e}")
         token = ""
