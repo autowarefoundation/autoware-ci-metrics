@@ -27,7 +27,7 @@ jobs:
       - name: Execute script
         run: |
           python scripts/docker_image_size.py \
-            --output-dir data/docker_image_sizes
+            --output-dir data/docker_image_sizes --dry-run
 
       - name: Commit results if changed
         run: |
