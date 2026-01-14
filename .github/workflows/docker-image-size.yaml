@@ -28,7 +28,8 @@ jobs:
         run: |
           python scripts/docker_image_size.py \
             --output-dir data/docker_image_sizes --dry-run \
-            --github-token ${{ github.token }}
+            --github-token ${{ github.token }} \
+            --github-actor ${{ github.actor }}
 
       - name: Commit results if changed
         run: |

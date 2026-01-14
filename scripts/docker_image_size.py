@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 import requests
 from subprocess import run, PIPE
 
-REGISTRY_URL = "https://ghcr.io"
+REGISTRY = "ghcr.io"
+REGISTRY_URL = f"http://{REGISTRY}"
 ORG = "autowarefoundation"
 IMAGE = "autoware"
 TAGS = ["universe-devel", "universe-devel-cuda", "core-devel"]
@@ -41,7 +42,7 @@ def get_auth_token(github_token: str = "") -> str:
     return data.get("token", "")
 
 
-def get_compressed_size(token: str, tag: str) -> tuple[int, int]:
+def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int]:
     """Get the compressed size of a Docker image from registry manifest.
 
     Returns a tuple of (compressed_size_bytes, num_layers).
@@ -52,9 +53,7 @@ def get_compressed_size(token: str, tag: str) -> tuple[int, int]:
         }
 
         # Get manifest list (handles multi-arch images)
-        manifest_list_url = (
-            f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}/manifests/{tag}"
-        )
+        manifest_list_url = f"{image}/manifests/{tag}"
         headers_list = headers.copy()
         headers_list["Accept"] = (
             "application/vnd.docker.distribution.manifest.list.v2+json"
@@ -94,7 +93,7 @@ def get_compressed_size(token: str, tag: str) -> tuple[int, int]:
                 "application/vnd.docker.distribution.manifest.v2+json"
             )
             response = requests.get(
-                f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}/manifests/{amd64_digest}",
+                f"{image}/manifests/{amd64_digest}",
                 headers=headers_manifest,
                 timeout=30,
             )
@@ -118,12 +117,13 @@ def get_compressed_size(token: str, tag: str) -> tuple[int, int]:
         return 0, 0
 
 
-def get_uncompressed_size(image_ref: str) -> int:
+def get_uncompressed_size(image: str, tag: str, token: str, username: str) -> int:
     """Get the uncompressed size of a Docker image by pulling it.
 
     Tries docker first, falls back to podman if docker is not available.
     Returns size in bytes, or 0 if unable to determine.
     """
+    image_ref = f"{image}:{tag}"
     for cmd in ["docker", "podman"]:
         try:
             # Check if command is available
@@ -132,6 +132,17 @@ def get_uncompressed_size(image_ref: str) -> int:
                 continue
 
             print(f"Using {cmd} to pull image {image_ref}")
+
+            # Login with token if provided
+            if token and username:
+                # Extract registry from image
+                registry = image.split("/")[0]
+                login_result = run(
+                    [cmd, "login", registry, "--username", username, "--password-stdin"],
+                    input=token, stdout=PIPE, stderr=PIPE, timeout=30, text=True
+                )
+                if login_result.returncode != 0:
+                    print(f"Warning: Failed to login with {cmd}: {login_result.stderr}")
 
             # Pull the image
             pull_result = run(
@@ -174,15 +185,16 @@ def get_uncompressed_size(image_ref: str) -> int:
     return 0
 
 
-def get_image_size(token: str, tag: str) -> dict:
+def get_image_size(token: str, tag: str, username: str) -> dict:
     """Get the compressed and uncompressed size of a Docker image."""
     try:
         # Get compressed size from registry manifest
-        compressed_size, num_layers = get_compressed_size(token, tag)
+        image = f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}"
+        compressed_size, num_layers = get_compressed_size(image, tag, token)
 
         # Get uncompressed size by pulling the image
-        image_ref = f"{REGISTRY_URL}/{ORG}/{IMAGE}:{tag}"
-        uncompressed_size = get_uncompressed_size(image_ref)
+        image = f"{REGISTRY}/{ORG}/{IMAGE}"
+        uncompressed_size = get_uncompressed_size(image, tag, token, username)
 
         return {
             "tag": tag,
@@ -291,12 +303,17 @@ def main():
         default="",
         help="GitHub token for authentication (falls back to GITHUB_TOKEN env var)",
     )
+    parser.add_argument(
+        "--github-actor",
+        default="",
+        help="GitHub actor/username for Docker registry login",
+    )
     args = parser.parse_args()
 
     print(f"Fetching Docker image sizes for {ORG}/{IMAGE}")
 
     try:
-        token_value = args.github_token or os.getenv("GITHUB_TOKEN", "")
+        token_value = args.github_token
         token = get_auth_token(token_value)
     except Exception as e:
         print(f"Warning: Failed to get auth token: {e}")
@@ -311,9 +328,12 @@ def main():
         "images": [],
     }
 
+    print(f"Results")
+    print(results)
+
     for tag in TAGS:
         print(f"Fetching size for tag: {tag}")
-        size_info = get_image_size(token, tag)
+        size_info = get_image_size(token, tag, args.github_actor)
         results["images"].append(size_info)
         if "error" not in size_info:
             print(
