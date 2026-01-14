@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import pathlib
 from datetime import datetime, timezone
 
@@ -15,14 +16,23 @@ OUTPUT_FILE_TEMPLATE = "docker_image_sizes_{timestamp}.json"
 
 
 def get_auth_token() -> str:
-    """Get authentication token from GitHub Container Registry."""
+    """Get authentication token from GitHub Container Registry.
+
+    If GITHUB_TOKEN is set, exchange it for a registry access token with pull scope.
+    Otherwise, request an anonymous token.
+    """
     url = (
         f"{REGISTRY_URL}/token?service=ghcr.io"
         f"&scope=repository:{ORG}/{IMAGE}:pull"
     )
-    response = requests.get(url)
-    response.raise_for_status()
+    env_token = os.getenv("GITHUB_TOKEN")
+    headers = {}
+    if env_token:
+        headers["Authorization"] = f"Bearer {env_token}"
+        headers["Accept"] = "application/json"
 
+    response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
     data = response.json()
     return data.get("token", "")
 
