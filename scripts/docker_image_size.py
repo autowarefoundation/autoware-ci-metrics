@@ -117,7 +117,7 @@ def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int]:
         return 0, 0
 
 
-def get_uncompressed_size(image: str, tag: str, token: str, username: str) -> int:
+def get_uncompressed_size(image: str, tag: str) -> int:
     """Get the uncompressed size of a Docker image by pulling it.
 
     Tries docker first, falls back to podman if docker is not available.
@@ -132,17 +132,6 @@ def get_uncompressed_size(image: str, tag: str, token: str, username: str) -> in
                 continue
 
             print(f"Using {cmd} to pull image {image_ref}")
-
-            # Login with token if provided
-            if token and username:
-                # Extract registry from image
-                registry = image.split("/")[0]
-                login_result = run(
-                    [cmd, "login", registry, "--username", username, "--password-stdin"],
-                    input=token, stdout=PIPE, stderr=PIPE, timeout=30, text=True
-                )
-                if login_result.returncode != 0:
-                    print(f"Warning: Failed to login with {cmd}: {login_result.stderr}")
 
             # Pull the image
             pull_result = run(
@@ -194,7 +183,7 @@ def get_image_size(token: str, tag: str, username: str) -> dict:
 
         # Get uncompressed size by pulling the image
         image = f"{REGISTRY}/{ORG}/{IMAGE}"
-        uncompressed_size = get_uncompressed_size(image, tag, token, username)
+        uncompressed_size = get_uncompressed_size(image, tag)
 
         return {
             "tag": tag,
@@ -303,11 +292,6 @@ def main():
         default="",
         help="GitHub token for authentication (falls back to GITHUB_TOKEN env var)",
     )
-    parser.add_argument(
-        "--github-actor",
-        default="",
-        help="GitHub actor/username for Docker registry login",
-    )
     args = parser.parse_args()
 
     print(f"Fetching Docker image sizes for {ORG}/{IMAGE}")
@@ -333,7 +317,7 @@ def main():
 
     for tag in TAGS:
         print(f"Fetching size for tag: {tag}")
-        size_info = get_image_size(token, tag, args.github_actor)
+        size_info = get_image_size(token, tag)
         results["images"].append(size_info)
         if "error" not in size_info:
             print(
