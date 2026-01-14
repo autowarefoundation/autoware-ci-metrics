@@ -41,64 +41,11 @@ def get_auth_token(github_token: str = "") -> str:
     return data.get("token", "")
 
 
-def get_uncompressed_size(image_ref: str) -> int:
-    """Get the uncompressed size of a Docker image by pulling it.
+def get_compressed_size(token: str, tag: str) -> tuple[int, int]:
+    """Get the compressed size of a Docker image from registry manifest.
 
-    Tries docker first, falls back to podman if docker is not available.
-    Returns size in bytes, or 0 if unable to determine.
+    Returns a tuple of (compressed_size_bytes, num_layers).
     """
-    for cmd in ["docker", "podman"]:
-        try:
-            # Check if command is available
-            check_result = run([cmd, "--version"], stdout=PIPE, stderr=PIPE, timeout=5)
-            if check_result.returncode != 0:
-                continue
-
-            print(f"Using {cmd} to pull image {image_ref}")
-
-            # Pull the image
-            pull_result = run(
-                [cmd, "pull", "--platform", "linux/amd64", image_ref],
-                stdout=PIPE, stderr=PIPE, timeout=600, text=True
-            )
-
-            if pull_result.returncode != 0:
-                print(f"Warning: Failed to pull image with {cmd}: {pull_result.stderr}")
-                continue
-
-            # Get image size using inspect
-            inspect_result = run(
-                [cmd, "inspect", image_ref],
-                stdout=PIPE, stderr=PIPE, timeout=30, text=True
-            )
-
-            if inspect_result.returncode != 0:
-                print(f"Warning: Failed to inspect image with {cmd}: {inspect_result.stderr}")
-                continue
-
-            inspect_data = json.loads(inspect_result.stdout)
-            if not inspect_data:
-                continue
-
-            # Get Size field (uncompressed size)
-            size = inspect_data[0].get("Size", 0)
-
-            # Clean up the image
-            run([cmd, "rmi", image_ref], stdout=PIPE, stderr=PIPE, timeout=30)
-
-            print(f"Uncompressed size for {image_ref}: {size} bytes")
-            return size
-
-        except Exception as e:
-            print(f"Warning: Error with {cmd}: {e}")
-            continue
-
-    print(f"Warning: Unable to determine uncompressed size for {image_ref}")
-    return 0
-
-
-def get_image_size(token: str, tag: str) -> dict:
-    """Get the compressed and uncompressed size of a Docker image."""
     try:
         headers = {
             "Authorization": f"Bearer {token}",
@@ -159,13 +106,79 @@ def get_image_size(token: str, tag: str) -> dict:
 
         # Get manifest layer sizes (compressed)
         total_compressed = 0
-        layers = (
-            amd64_manifest.get("layers", [])
-            if amd64_manifest
-            else []
-        )
+        layers = amd64_manifest.get("layers", [])
         for layer in layers:
             total_compressed += layer.get("size", 0)
+
+        print(f"Compressed size for {tag}: {total_compressed} bytes ({len(layers)} layers)")
+        return total_compressed, len(layers)
+
+    except Exception as e:
+        print(f"Warning: Failed to get compressed size for {tag}: {e}")
+        return 0, 0
+
+
+def get_uncompressed_size(image_ref: str) -> int:
+    """Get the uncompressed size of a Docker image by pulling it.
+
+    Tries docker first, falls back to podman if docker is not available.
+    Returns size in bytes, or 0 if unable to determine.
+    """
+    for cmd in ["docker", "podman"]:
+        try:
+            # Check if command is available
+            check_result = run([cmd, "--version"], stdout=PIPE, stderr=PIPE, timeout=5)
+            if check_result.returncode != 0:
+                continue
+
+            print(f"Using {cmd} to pull image {image_ref}")
+
+            # Pull the image
+            pull_result = run(
+                [cmd, "pull", "--platform", "linux/amd64", image_ref],
+                stdout=PIPE, stderr=PIPE, timeout=600, text=True
+            )
+
+            if pull_result.returncode != 0:
+                print(f"Warning: Failed to pull image with {cmd}: {pull_result.stderr}")
+                continue
+
+            # Get image size using inspect
+            inspect_result = run(
+                [cmd, "inspect", image_ref],
+                stdout=PIPE, stderr=PIPE, timeout=30, text=True
+            )
+
+            if inspect_result.returncode != 0:
+                print(f"Warning: Failed to inspect image with {cmd}: {inspect_result.stderr}")
+                continue
+
+            inspect_data = json.loads(inspect_result.stdout)
+            if not inspect_data:
+                continue
+
+            # Get Size field (uncompressed size)
+            size = inspect_data[0].get("Size", 0)
+
+            # Clean up the image
+            run([cmd, "rmi", image_ref], stdout=PIPE, stderr=PIPE, timeout=30)
+
+            print(f"Uncompressed size for {image_ref}: {size} bytes")
+            return size
+
+        except Exception as e:
+            print(f"Warning: Error with {cmd}: {e}")
+            continue
+
+    print(f"Warning: Unable to determine uncompressed size for {image_ref}")
+    return 0
+
+
+def get_image_size(token: str, tag: str) -> dict:
+    """Get the compressed and uncompressed size of a Docker image."""
+    try:
+        # Get compressed size from registry manifest
+        compressed_size, num_layers = get_compressed_size(token, tag)
 
         # Get uncompressed size by pulling the image
         image_ref = f"{REGISTRY_URL}/{ORG}/{IMAGE}:{tag}"
@@ -173,15 +186,15 @@ def get_image_size(token: str, tag: str) -> dict:
 
         return {
             "tag": tag,
-            "compressed_size_bytes": total_compressed,
+            "compressed_size_bytes": compressed_size,
             "compressed_size_gb": round(
-                total_compressed / (1024**3), 2
+                compressed_size / (1024**3), 2
             ),
             "uncompressed_size_bytes": uncompressed_size,
             "uncompressed_size_gb": round(
                 uncompressed_size / (1024**3), 2
             ),
-            "num_layers": len(layers),
+            "num_layers": num_layers,
             "fetched_at": (
                 datetime.now(timezone.utc).isoformat()
             ),
