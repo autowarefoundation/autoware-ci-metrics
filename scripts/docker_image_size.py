@@ -28,8 +28,11 @@ def get_auth_token() -> str:
     env_token = os.getenv("GITHUB_TOKEN")
     headers = {}
     if env_token:
+        print("Using GITHUB_TOKEN for authentication")
         headers["Authorization"] = f"Bearer {env_token}"
         headers["Accept"] = "application/json"
+    else:
+        print("No GITHUB_TOKEN found, requesting anonymous token")
 
     response = requests.get(url, headers=headers, timeout=30)
     response.raise_for_status()
