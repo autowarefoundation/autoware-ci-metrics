@@ -41,8 +41,64 @@ def get_auth_token(github_token: str = "") -> str:
     return data.get("token", "")
 
 
+def get_uncompressed_size(image_ref: str) -> int:
+    """Get the uncompressed size of a Docker image by pulling it.
+
+    Tries docker first, falls back to podman if docker is not available.
+    Returns size in bytes, or 0 if unable to determine.
+    """
+    for cmd in ["docker", "podman"]:
+        try:
+            # Check if command is available
+            check_result = run([cmd, "--version"], stdout=PIPE, stderr=PIPE, timeout=5)
+            if check_result.returncode != 0:
+                continue
+
+            print(f"Using {cmd} to pull image {image_ref}")
+
+            # Pull the image
+            pull_result = run(
+                [cmd, "pull", "--platform", "linux/amd64", image_ref],
+                stdout=PIPE, stderr=PIPE, timeout=600, text=True
+            )
+
+            if pull_result.returncode != 0:
+                print(f"Warning: Failed to pull image with {cmd}: {pull_result.stderr}")
+                continue
+
+            # Get image size using inspect
+            inspect_result = run(
+                [cmd, "inspect", image_ref],
+                stdout=PIPE, stderr=PIPE, timeout=30, text=True
+            )
+
+            if inspect_result.returncode != 0:
+                print(f"Warning: Failed to inspect image with {cmd}: {inspect_result.stderr}")
+                continue
+
+            inspect_data = json.loads(inspect_result.stdout)
+            if not inspect_data:
+                continue
+
+            # Get Size field (uncompressed size)
+            size = inspect_data[0].get("Size", 0)
+
+            # Clean up the image
+            run([cmd, "rmi", image_ref], stdout=PIPE, stderr=PIPE, timeout=30)
+
+            print(f"Uncompressed size for {image_ref}: {size} bytes")
+            return size
+
+        except Exception as e:
+            print(f"Warning: Error with {cmd}: {e}")
+            continue
+
+    print(f"Warning: Unable to determine uncompressed size for {image_ref}")
+    return 0
+
+
 def get_image_size(token: str, tag: str) -> dict:
-    """Get the uncompressed size of a Docker image."""
+    """Get the compressed and uncompressed size of a Docker image."""
     try:
         headers = {
             "Authorization": f"Bearer {token}",
@@ -98,63 +154,9 @@ def get_image_size(token: str, tag: str) -> dict:
             response.raise_for_status()
             amd64_manifest = response.json()
 
-        # Get config blob to get uncompressed sizes
         if not amd64_manifest:
             raise ValueError("Failed to retrieve manifest")
 
-        config_digest = (
-            amd64_manifest.get("config", {}).get("digest", "")
-        )
-        response = requests.get(
-            f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}/blobs/{config_digest}",
-            headers=headers,
-            timeout=30,
-        )
-        response.raise_for_status()
-        config_data = response.json()
-
-        # Sum layer sizes from rootfs.diff_ids (uncompressed)
-        # The diff_ids correspond to layers in order
-        print(f"Fetched config for {tag}, calculating sizes...")
-        # print(config_data)
-        # print(config_data["rootfs"])
-        rootfs = config_data.get("rootfs") if config_data else None
-        diff_ids = (
-            rootfs.get("diff_ids", [])
-            if rootfs
-            else []
-        )
-
-        total_uncompressed = 0
-        # Get uncompressed sizes from each layer blob header
-        for diff_id in diff_ids:
-            try:
-                url = f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}/blobs/{diff_id}"
-                print(f"Fetching layer size {diff_id} from {url}")
-                print("Headers:", headers)
-                response = requests.head(
-                    url,
-                    headers=headers,
-                    timeout=30,
-                    allow_redirects=True,
-                )
-                if response.status_code == 200:
-                    # Docker API doesn't return uncompressed size in head
-                    # Use the compressed size as proxy
-                    size = response.headers.get(
-                        "Docker-Content-Length",
-                        response.headers.get("Content-Length", 0),
-                    )
-                    total_uncompressed += int(size)
-                else:
-                    print(
-                        f"Warning: Failed to fetch layer {diff_id} "
-                        f"header: {response.status_code}"
-                    )
-            except Exception as e:
-                print(f"Warning: Failed to get size for layer {diff_id} in {tag}: {e}")
-                pass
-        print(f"Total uncompressed size for {tag}: {total_uncompressed} bytes")
         # Get manifest layer sizes (compressed)
         total_compressed = 0
         layers = (
@@ -165,11 +167,19 @@ def get_image_size(token: str, tag: str) -> dict:
         for layer in layers:
             total_compressed += layer.get("size", 0)
 
+        # Get uncompressed size by pulling the image
+        image_ref = f"{REGISTRY_URL}/{ORG}/{IMAGE}:{tag}"
+        uncompressed_size = get_uncompressed_size(image_ref)
+
         return {
             "tag": tag,
             "compressed_size_bytes": total_compressed,
             "compressed_size_gb": round(
                 total_compressed / (1024**3), 2
+            ),
+            "uncompressed_size_bytes": uncompressed_size,
+            "uncompressed_size_gb": round(
+                uncompressed_size / (1024**3), 2
             ),
             "num_layers": len(layers),
             "fetched_at": (
@@ -210,9 +220,10 @@ def has_new_data(current_results: dict) -> bool:
             return True
 
         for current, previous in zip(current_images, previous_images):
-            # Compare compressed sizes and layer counts
+            # Compare compressed/uncompressed sizes and layer counts
             if (
                 current.get("compressed_size_bytes") != previous.get("compressed_size_bytes")
+                or current.get("uncompressed_size_bytes") != previous.get("uncompressed_size_bytes")
                 or current.get("num_layers") != previous.get("num_layers")
                 or "error" in current != "error" in previous
             ):
@@ -294,7 +305,8 @@ def main():
         if "error" not in size_info:
             print(
                 f"  {tag}: "
-                f"{size_info['compressed_size_gb']} GB (compressed) "
+                f"{size_info['compressed_size_gb']} GB (compressed), "
+                f"{size_info['uncompressed_size_gb']} GB (uncompressed) "
                 f"with {size_info['num_layers']} layers"
             )
         else:
