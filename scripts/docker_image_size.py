@@ -30,6 +30,8 @@ def get_auth_token(github_token: str = "") -> str:
         print("Exchanging GitHub token for registry access token")
         headers["Authorization"] = f"Bearer {github_token}"
         headers["Accept"] = "application/json"
+        print("Requesting access token with pull scope")
+        print("Headers:", headers)
     else:
         print("Requesting anonymous access token")
 
@@ -129,6 +131,7 @@ def get_image_size(token: str, tag: str) -> dict:
             try:
                 url = f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}/blobs/{diff_id}"
                 print(f"Fetching layer size {diff_id} from {url}")
+                print("Headers:", headers)
                 response = requests.head(
                     url,
                     headers=headers,
