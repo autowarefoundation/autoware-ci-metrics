@@ -136,7 +136,7 @@ def get_uncompressed_size(image: str, tag: str) -> int:
             # Pull the image
             pull_result = run(
                 [cmd, "pull", "--platform", "linux/amd64", image_ref],
-                stdout=PIPE, stderr=PIPE, timeout=600, text=True
+                stdout=PIPE, stderr=PIPE, text=True
             )
 
             if pull_result.returncode != 0:
@@ -147,6 +147,11 @@ def get_uncompressed_size(image: str, tag: str) -> int:
             inspect_result = run(
                 [cmd, "inspect", image_ref],
                 stdout=PIPE, stderr=PIPE, timeout=30, text=True
+            )
+
+            remove_result = run(
+                [cmd, "system", "prune", "--all", "--force"],
+                stdout=PIPE, stderr=PIPE, text=True
             )
 
             if inspect_result.returncode != 0:
