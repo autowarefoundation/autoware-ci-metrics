@@ -101,6 +101,9 @@ def get_image_size(token: str, tag: str) -> dict:
 
         # Sum layer sizes from rootfs.diff_ids (uncompressed)
         # The diff_ids correspond to layers in order
+        print(f"Fetched config for {tag}, calculating sizes...")
+        # print(config_data)
+        # print(config_data["rootfs"])
         rootfs = config_data.get("rootfs") if config_data else None
         diff_ids = (
             rootfs.get("diff_ids", [])
@@ -112,8 +115,10 @@ def get_image_size(token: str, tag: str) -> dict:
         # Get uncompressed sizes from each layer blob header
         for diff_id in diff_ids:
             try:
+                url = f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}/blobs/{diff_id}"
+                print(f"Fetching layer size {diff_id} from {url}")
                 response = requests.head(
-                    f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}/blobs/{diff_id}",
+                    url,
                     headers=headers,
                     timeout=30,
                     allow_redirects=True,
@@ -126,9 +131,15 @@ def get_image_size(token: str, tag: str) -> dict:
                         response.headers.get("Content-Length", 0),
                     )
                     total_uncompressed += int(size)
-            except Exception:
+                else:
+                    print(
+                        f"Warning: Failed to fetch layer {diff_id} "
+                        f"header: {response.status_code}"
+                    )
+            except Exception as e:
+                print(f"Warning: Failed to get size for layer {diff_id} in {tag}: {e}")
                 pass
-
+        print(f"Total uncompressed size for {tag}: {total_uncompressed} bytes")
         # Get manifest layer sizes (compressed)
         total_compressed = 0
         layers = (
