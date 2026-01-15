@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests numpy python-dxf
+          pip install requests numpy
 
       - name: Restore cache
         uses: actions/cache@v4
@@ -39,7 +39,7 @@ jobs:
       - name: Execute script
         run: |
           mkdir -p cache
-          python scripts/measure_workflows.py --github_token ${{ github.token }} --github_actor ${{ github.actor }}
+          python scripts/measure_workflows.py --github_token ${{ github.token }}
           cp github_action_data.json public/
 
       - name: Upload Pages artifact

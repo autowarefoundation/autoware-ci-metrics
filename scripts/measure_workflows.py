@@ -1,10 +1,10 @@
 import argparse
 import json
+import pathlib
 from datetime import datetime, timedelta
 
 import github_api
 from colcon_log_analyzer import ColconLogAnalyzer
-from dxf import DXF
 
 # Constant
 REPO = "autowarefoundation/autoware"
@@ -13,6 +13,7 @@ DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = "docker-build-and-push.yaml"
 DOCKER_ORGS = "autowarefoundation"
 DOCKER_IMAGE = "autoware"
 CACHE_DIR = "./cache/"
+DATA_DIR = "./data/"
 
 
 # Utility function
@@ -58,12 +59,12 @@ def get_workflow_runs(github_token, date_threshold):
     return health_check, docker_build_and_push
 
 
-def get_docker_image_analysis(github_token, github_actor, date_threshold):
-    package_api = github_api.GithubPackagesAPI(github_token)
-    packages = package_api.get_all_containers(DOCKER_ORGS, DOCKER_IMAGE)
-
-    def auth(dxf, response):
-        dxf.authenticate(github_actor, github_token, response=response)
+def get_docker_image_analysis_from_data(date_threshold):
+    """Load docker image data from the data directory."""
+    data_path = pathlib.Path(DATA_DIR) / "docker_image_sizes"
+    if not data_path.exists():
+        print(f"Data directory {data_path} does not exist")
+        return {}
 
     docker_images = {
         "core-common-devel": [],
@@ -88,68 +89,53 @@ def get_docker_image_analysis(github_token, github_actor, date_threshold):
         "universe-cuda": [],
     }
 
-    dxf = DXF("ghcr.io", f"{DOCKER_ORGS}/{DOCKER_IMAGE}", auth)
-    for package in [p for p in packages if p["updated_at"] >= date_threshold]:
-        tag_count = len(package["metadata"]["container"]["tags"])
-        if tag_count == 0:
-            continue
-        tag = package["metadata"]["container"]["tags"][0]
-        docker_image = ""
-        matched = False
-        for key in ("universe-sensing-perception",
-                    "universe-localization-mapping",
-                    "universe-planning-control",
-                    "universe-vehicle-system",
-                    "universe-visualization"):
-            if key in tag:
-                docker_image = (
-                    key
-                    + ("-devel" if "devel" in tag else "")
-                    + ("-cuda" if "cuda" in tag else "")
-                )
-                matched = True
-                break
-        if not matched:
-            if "universe" in tag:
-                docker_image = (
-                    "universe"
-                    + ("-common" if "common" in tag else "")
-                    + ("-devel" if "devel" in tag else "")
-                    + ("-cuda" if "cuda" in tag else "")
-                )
-            elif "core" in tag:
-                docker_image = (
-                    "core"
-                    + ("-common" if "common" in tag else "")
-                    + ("-devel" if "devel" in tag else "")
-                    + ("-cuda" if "cuda" in tag else "")
-                )
-        print(docker_image)
-        if docker_image == "":
-            continue
+    # Find all JSON files in the data directory
+    json_files = sorted(data_path.glob("docker_image_sizes_*.json"))
 
-        print(f"Fetching manifest for {tag}")
+    for json_file in json_files:
         try:
-            manifest = try_cache(f"docker_{tag}", lambda: dxf.get_manifest(tag))
-        except Exception as e:
-            print(f"Failed to fetch manifest for {tag}: {e}")
-            continue
-        if manifest is None:
-            print(f"Failed to fetch manifest for {tag}")
-            continue
-        if type(manifest) is dict:
-            manifest = list(manifest.values())[0]
-        metadata = json.loads(manifest)
+            with open(json_file) as f:
+                data = json.load(f)
 
-        total_size = sum([layer["size"] for layer in metadata["layers"]])
-        if docker_image in docker_images:
-            docker_images[docker_image].append(
-                {
-                    "size": total_size,
-                    "date": package["updated_at"].strftime("%Y/%m/%d %H:%M:%S"),
-                    "tag": tag,
-                }
-            )
+            # Parse the timestamp
+            timestamp = datetime.fromisoformat(data["timestamp"])
+            if timestamp < date_threshold:
+                continue
+
+            # Process each image in the data
+            for image_data in data.get("images", []):
+                tag = image_data["tag"]
+
+                # Map tag to docker_image category
+                docker_image = ""
+                if tag == "universe-devel":
+                    docker_image = "universe-devel"
+                elif tag == "universe-devel-cuda":
+                    docker_image = "universe-devel-cuda"
+                elif tag == "core-devel":
+                    docker_image = "core-devel"
+                elif tag == "universe":
+                    docker_image = "universe"
+                elif tag == "universe-cuda":
+                    docker_image = "universe-cuda"
+                else:
+                    # Handle other tags if needed
+                    continue
+
+                if docker_image in docker_images:
+                    docker_images[docker_image].append(
+                        {
+                            "size": image_data.get("compressed_size_bytes", 0),
+                            "date": datetime.fromisoformat(image_data["fetched_at"]).strftime(
+                                "%Y/%m/%d %H:%M:%S"
+                            ),
+                            "tag": tag,
+                        }
+                    )
+        except Exception as e:
+            print(f"Error processing {json_file}: {e}")
+            continue
+
     return docker_images
 
 
@@ -223,7 +209,6 @@ def export_to_json(
 
 
 if __name__ == "__main__":
-    # Setup argparse to parse command-line arguments
     parser = argparse.ArgumentParser(
         description="Fetch GitHub Action's run data and plot it."
     )
@@ -233,22 +218,20 @@ if __name__ == "__main__":
         help="GitHub Token to authenticate with GitHub API.",
     )
     parser.add_argument(
-        "--github_actor",
-        required=True,
-        help="GitHub username to authenticate with GitHub API (Packages).",
+        "--data-dir",
+        default=DATA_DIR,
+        help="Directory containing data files.",
     )
     args = parser.parse_args()
 
-    # Use the github_token passed as command-line argument
     github_token = args.github_token
-    github_actor = args.github_actor
 
     date_threshold = datetime.now() - timedelta(days=90)
     (
         health_check,
         docker_build_and_push,
     ) = get_workflow_runs(github_token, date_threshold)
-    docker_images = get_docker_image_analysis(github_token, github_actor, date_threshold)
+    docker_images = get_docker_image_analysis_from_data(date_threshold)
     json_data = export_to_json(
         health_check,
         docker_build_and_push,
