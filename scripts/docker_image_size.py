@@ -216,68 +216,6 @@ def get_image_size(token: str, tag: str) -> dict:
         }
 
 
-def has_new_data(current_results: dict) -> bool:
-    """Check if current results differ from the most recent previous results."""
-    output_dir = pathlib.Path(OUTPUT_DIR)
-    if not output_dir.exists():
-        return True
-
-    # Find the most recent results file
-    json_files = sorted(output_dir.glob("docker_image_sizes_*.json"), reverse=True)
-    if not json_files:
-        return True
-
-    try:
-        with open(json_files[0], "r") as f:
-            previous_results = json.load(f)
-
-        # Compare image data (ignore timestamp and fetched_at)
-        current_images = current_results.get("images", [])
-        previous_images = previous_results.get("images", [])
-
-        if len(current_images) != len(previous_images):
-            return True
-
-        for current, previous in zip(current_images, previous_images):
-            # Compare compressed/uncompressed sizes and layer counts
-            if (
-                current.get("compressed_size_bytes") != previous.get("compressed_size_bytes")
-                or current.get("uncompressed_size_bytes") != previous.get("uncompressed_size_bytes")
-                or current.get("num_layers") != previous.get("num_layers")
-                or "error" in current != "error" in previous
-            ):
-                return True
-
-        return False
-    except Exception as e:
-        print(f"Warning: Could not read previous results: {e}")
-        return True
-
-
-def git_commit_results(file_path: str) -> bool:
-    """Commit the results file to git."""
-    try:
-        # Configure git if needed
-        run(["git", "config", "user.email", "github-actions@github.com"], check=True)
-        run(["git", "config", "user.name", "github-actions"], check=True)
-
-        # Add the file
-        run(["git", "add", file_path], check=True)
-
-        # Get a timestamp for the commit message
-        timestamp = datetime.now(timezone.utc).isoformat()
-        commit_message = f"Update docker image sizes - {timestamp}"
-
-        # Commit
-        run(["git", "commit", "-m", commit_message], check=True)
-
-        print(f"Results committed to git: {file_path}")
-        return True
-    except Exception as e:
-        print(f"Error committing to git: {e}")
-        return False
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Retrieve Docker image sizes from GHCR"
@@ -286,11 +224,6 @@ def main():
         "--output-dir",
         default=OUTPUT_DIR,
         help="Output directory for JSON files",
-    )
-    parser.add_argument(
-        "-n", "--dry-run",
-        action="store_true",
-        help="Perform a dry run without committing to the repository",
     )
     parser.add_argument(
         "--github-token",
@@ -334,11 +267,6 @@ def main():
         else:
             print(f"  {tag}: Error - {size_info['error']}")
 
-    # Check if there's new data
-    if not has_new_data(results):
-        print("No new data detected. Skipping commit.")
-        return
-
     # Save results with timestamp
     output_dir = pathlib.Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -351,12 +279,6 @@ def main():
         json.dump(results, f, indent=2)
 
     print(f"Results saved to {output_path}")
-
-    # Commit to git
-    if args.dry_run:
-        print("Dry run: Skipping git commit")
-    else:
-        git_commit_results(str(output_path))
 
 
 if __name__ == "__main__":

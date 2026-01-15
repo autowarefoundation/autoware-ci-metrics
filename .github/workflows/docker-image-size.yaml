@@ -37,17 +37,15 @@ jobs:
       - name: Execute script
         run: |
           python scripts/docker_image_size.py \
-            --output-dir data/docker_image_sizes --dry-run \
+            --output-dir data/docker_image_sizes \
             --github-token ${{ github.token }}
 
-      - name: Commit results if changed
+      - name: Check and commit results
+        if: false
         run: |
-          if git diff --quiet data/docker_image_sizes/; then
-            echo "No changes to commit"
-          else
-            git config user.email "github-actions@github.com"
-            git config user.name "github-actions"
-            git add data/docker_image_sizes/
-            git commit -m "Update docker image sizes" || true
-            git push
-          fi
+          python scripts/check_new_data.py data/docker_image_sizes --commit
+
+      - name: Push changes
+        if: false
+        run: |
+          git push || echo "No changes to push"
