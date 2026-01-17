@@ -67,26 +67,9 @@ def get_docker_image_analysis_from_data(date_threshold):
         return {}
 
     docker_images = {
-        "core-common-devel": [],
         "core-devel": [],
-        "core": [],
-        "universe-common-devel": [],
-        "universe-sensing-perception-devel": [],
-        "universe-sensing-perception-devel-cuda": [],
-        "universe-localization-mapping-devel": [],
-        "universe-planning-control-devel": [],
-        "universe-vehicle-system-devel": [],
-        "universe-sensing-perception": [],
-        "universe-sensing-perception-cuda": [],
-        "universe-localization-mapping": [],
-        "universe-planning-control": [],
-        "universe-vehicle-system": [],
-        "universe-visualization-devel": [],
-        "universe-visualization": [],
         "universe-devel": [],
         "universe-devel-cuda": [],
-        "universe": [],
-        "universe-cuda": [],
     }
 
     # Find all JSON files in the data directory
@@ -106,32 +89,15 @@ def get_docker_image_analysis_from_data(date_threshold):
             for image_data in data.get("images", []):
                 tag = image_data["tag"]
 
-                # Map tag to docker_image category
-                docker_image = ""
-                if tag == "universe-devel":
-                    docker_image = "universe-devel"
-                elif tag == "universe-devel-cuda":
-                    docker_image = "universe-devel-cuda"
-                elif tag == "core-devel":
-                    docker_image = "core-devel"
-                elif tag == "universe":
-                    docker_image = "universe"
-                elif tag == "universe-cuda":
-                    docker_image = "universe-cuda"
-                else:
-                    # Handle other tags if needed
-                    continue
-
-                if docker_image in docker_images:
-                    docker_images[docker_image].append(
-                        {
-                            "size": image_data.get("compressed_size_bytes", 0),
-                            "date": datetime.fromisoformat(image_data["fetched_at"]).strftime(
-                                "%Y/%m/%d %H:%M:%S"
-                            ),
-                            "tag": tag,
-                        }
-                    )
+                docker_images[tag].append(
+                    {
+                        "size": image_data.get("compressed_size_bytes", 0),
+                        "date": datetime.fromisoformat(image_data["fetched_at"]).strftime(
+                            "%Y/%m/%d %H:%M:%S"
+                        ),
+                        "tag": tag,
+                    }
+                )
         except Exception as e:
             print(f"Error processing {json_file}: {e}")
             continue
