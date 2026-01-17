@@ -41,9 +41,9 @@ jobs:
             --github-token ${{ github.token }}
 
       - name: Check and commit results
-        if: false
         run: |
-          python scripts/check_new_data.py data/docker_image_sizes --commit
+          python scripts/check_new_data.py data/docker_image_sizes
+          #python scripts/check_new_data.py data/docker_image_sizes --commit
 
       - name: Push changes
         if: false
