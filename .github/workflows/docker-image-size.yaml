@@ -17,8 +17,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkout repository
+      - name: Checkout repository (main)
         uses: actions/checkout@v4
+
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data-storage
+          path: data-storage
 
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -36,13 +42,15 @@ jobs:
       - name: Execute script
         run: |
           python scripts/docker_image_size.py \
-            --output-dir data/docker_image_sizes \
+            --output-dir data-storage \
             --github-token ${{ github.token }}
 
       - name: Check and commit results
         run: |
-          python scripts/check_new_data.py data/docker_image_sizes --commit
+          cd data-storage
+          python ../scripts/check_new_data.py . --commit
 
       - name: Push changes
         run: |
-          git push || echo "No changes to push"
+          cd data-storage
+          git push origin data-storage || echo "No changes to push"

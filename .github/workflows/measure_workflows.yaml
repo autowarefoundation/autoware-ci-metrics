@@ -19,6 +19,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data-storage
+          path: data-storage
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -38,7 +44,9 @@ jobs:
       - name: Execute script
         run: |
           mkdir -p cache
-          python scripts/measure_workflows.py --github_token ${{ github.token }}
+          python scripts/measure_workflows.py \
+            --github_token ${{ github.token }} \
+            --data-dir data-storage
           cp github_action_data.json public/
 
       - name: Upload Pages artifact

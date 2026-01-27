@@ -59,7 +59,7 @@ def get_workflow_runs(github_token, date_threshold):
 
 def get_docker_image_analysis_from_data(date_threshold, data_dir=DATA_DIR):
     """Load docker image data from the data directory."""
-    data_path = pathlib.Path(data_dir) / "docker_image_sizes"
+    data_path = pathlib.Path(data_dir)
     if not data_path.exists():
         print(f"Data directory {data_path} does not exist")
         return {}
