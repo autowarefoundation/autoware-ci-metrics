@@ -174,25 +174,25 @@ fetch('github_action_data.json')
     );
     dockerBuildAndPushTimeChart.render();
 
-    // Docker
-    const dockerOptions = {
+    // Docker image size chart (compressed)
+    const dockerCompressedOptions = {
       series: [
         {
           name: 'core-devel',
           data: json.docker_images['core-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
           }),
         },
         {
           name: 'universe-devel',
           data: json.docker_images['universe-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
           }),
         },
         {
           name: 'universe-devel-cuda',
           data: json.docker_images['universe-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
           }),
         },
       ],
@@ -207,7 +207,7 @@ fetch('github_action_data.json')
         enabled: false,
       },
       title: {
-        text: 'Docker Image Size',
+        text: 'Docker Image Size (compressed)',
         align: 'left',
       },
       xaxis: {
@@ -231,9 +231,72 @@ fetch('github_action_data.json')
       },
     };
 
-    const dockerChart = new ApexCharts(
-      document.querySelector('#docker-chart'),
-      dockerOptions,
+    const dockerChartCompressed = new ApexCharts(
+      document.querySelector('#docker-chart-compressed'),
+      dockerCompressedOptions,
     );
-    dockerChart.render();
+    dockerChartCompressed.render();
+
+    // Docker image size chart (uncompressed)
+    const dockerUncompressedOptions = {
+      series: [
+        {
+          name: 'core-devel',
+          data: json.docker_images['core-devel'].map((data) => {
+            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-devel',
+          data: json.docker_images['universe-devel'].map((data) => {
+            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-devel-cuda',
+          data: json.docker_images['universe-devel-cuda'].map((data) => {
+            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
+          }),
+        },
+      ],
+      chart: {
+        height: 500,
+        type: 'line',
+        zoom: {
+          enabled: true,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'Docker Image Size (uncompressed)',
+        align: 'left',
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+      yaxis: {
+        min: 0,
+        labels: {
+          formatter: (val) => `${val.toFixed(2)}GB`,
+        },
+        title: {
+          text: 'Size',
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: function (val) {
+            return `${val.toFixed(2)}GB`;
+          },
+        },
+      },
+    };
+
+    const dockerChartUncompressed = new ApexCharts(
+      document.querySelector('#docker-chart-uncompressed'),
+      dockerUncompressedOptions,
+    );
+    dockerChartUncompressed.render();
   });

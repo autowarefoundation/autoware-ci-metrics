@@ -89,7 +89,10 @@ def get_docker_image_analysis_from_data(date_threshold, data_dir=DATA_DIR):
 
                 docker_images[tag].append(
                     {
-                        "size": image_data.get("compressed_size_bytes", 0),
+                        "size_compressed": image_data.get("compressed_size_bytes", 0),
+                        "size_uncompressed": image_data.get(
+                            "uncompressed_size_bytes", 0
+                        ),
                         "date": datetime.fromisoformat(
                             image_data["fetched_at"]
                         ).strftime("%Y/%m/%d %H:%M:%S"),
