@@ -1,7 +1,7 @@
 import argparse
 import json
 import pathlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import github_api
 from colcon_log_analyzer import ColconLogAnalyzer
@@ -52,16 +52,14 @@ def get_workflow_runs(github_token, date_threshold):
         item for item in health_check if 60 * 3 < item["duration"] < 3600 * 10
     ]
     docker_build_and_push = [
-        item
-        for item in docker_build_and_push
-        if 60 * 3 < item["duration"] < 3600 * 10
+        item for item in docker_build_and_push if 60 * 3 < item["duration"] < 3600 * 10
     ]
     return health_check, docker_build_and_push
 
 
-def get_docker_image_analysis_from_data(date_threshold):
+def get_docker_image_analysis_from_data(date_threshold, data_dir=DATA_DIR):
     """Load docker image data from the data directory."""
-    data_path = pathlib.Path(DATA_DIR) / "docker_image_sizes"
+    data_path = pathlib.Path(data_dir) / "docker_image_sizes"
     if not data_path.exists():
         print(f"Data directory {data_path} does not exist")
         return {}
@@ -92,9 +90,9 @@ def get_docker_image_analysis_from_data(date_threshold):
                 docker_images[tag].append(
                     {
                         "size": image_data.get("compressed_size_bytes", 0),
-                        "date": datetime.fromisoformat(image_data["fetched_at"]).strftime(
-                            "%Y/%m/%d %H:%M:%S"
-                        ),
+                        "date": datetime.fromisoformat(
+                            image_data["fetched_at"]
+                        ).strftime("%Y/%m/%d %H:%M:%S"),
                         "tag": tag,
                     }
                 )
@@ -167,7 +165,9 @@ def export_to_json(
     json_data = {
         "workflow_time": {
             "health-check": _export_health_check_to_json(health_check),
-            "docker-build-and-push": _export_docker_build_and_push_to_json(docker_build_and_push),
+            "docker-build-and-push": _export_docker_build_and_push_to_json(
+                docker_build_and_push
+            ),
         },
         "docker_images": docker_images,
     }
@@ -192,12 +192,12 @@ if __name__ == "__main__":
 
     github_token = args.github_token
 
-    date_threshold = datetime.now() - timedelta(days=90)
+    date_threshold = datetime.now(timezone.utc) - timedelta(days=90)
     (
         health_check,
         docker_build_and_push,
     ) = get_workflow_runs(github_token, date_threshold)
-    docker_images = get_docker_image_analysis_from_data(date_threshold)
+    docker_images = get_docker_image_analysis_from_data(date_threshold, args.data_dir)
     json_data = export_to_json(
         health_check,
         docker_build_and_push,
