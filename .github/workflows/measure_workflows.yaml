@@ -12,12 +12,24 @@ jobs:
   measure_workflows:
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       pages: write
       id-token: write
       actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Ensure data-storage branch exists
+        run: |
+          if ! git ls-remote --exit-code --heads origin data-storage > /dev/null 2>&1; then
+            echo "Branch 'data-storage' does not exist. Creating it..."
+            git checkout --orphan data-storage
+            git reset --hard
+            git commit --allow-empty -m "Initialize data-storage branch"
+            git push origin data-storage
+            git checkout -
+          fi
 
       - name: Checkout data branch
         uses: actions/checkout@v4

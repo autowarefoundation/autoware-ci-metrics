@@ -9,6 +9,8 @@ on:
 jobs:
   docker_image_size:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -19,6 +21,17 @@ jobs:
 
       - name: Checkout repository (main)
         uses: actions/checkout@v4
+
+      - name: Ensure data-storage branch exists
+        run: |
+          if ! git ls-remote --exit-code --heads origin data-storage > /dev/null 2>&1; then
+            echo "Branch 'data-storage' does not exist. Creating it..."
+            git checkout --orphan data-storage
+            git reset --hard
+            git commit --allow-empty -m "Initialize data-storage branch"
+            git push origin data-storage
+            git checkout -
+          fi
 
       - name: Checkout data branch
         uses: actions/checkout@v4
