@@ -20,6 +20,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure Git user's name and email
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+
       - name: Ensure data-storage branch exists
         run: |
           if ! git ls-remote --exit-code --heads origin data-storage > /dev/null 2>&1; then
