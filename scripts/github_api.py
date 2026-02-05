@@ -1,6 +1,6 @@
 # GitHub Workflow API wrapper
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
@@ -24,7 +24,9 @@ class GitHubWorkflowAPI:
         date_threshold: Optional[datetime] = None,
     ):
         payloads = {"per_page": 100, "status": "completed", "page": "1"}
-        endpoint = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
+        endpoint = (
+            f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
+        )
         print(f"Fetching workflow runs from {endpoint}")
 
         first_page_response = requests.get(
@@ -59,10 +61,10 @@ class GitHubWorkflowAPI:
         for run in workflow_runs:
             run["created_at"] = datetime.strptime(
                 run["created_at"], self.time_format
-            )
+            ).replace(tzinfo=timezone.utc)
             run["updated_at"] = datetime.strptime(
                 run["updated_at"], self.time_format
-            )
+            ).replace(tzinfo=timezone.utc)
         workflow_runs = [
             run for run in workflow_runs if run["created_at"] > date_threshold
         ]
@@ -84,7 +86,7 @@ class GitHubWorkflowAPI:
         for index, run in enumerate(workflow_runs):
             json_response = requests.get(run["jobs_url"], headers=self.headers).json()
             if "jobs" not in json_response:
-                print(f"Error in fetching jobs from {run["jobs_url"]}: {json_response}")
+                print(f"Error in fetching jobs from {run['jobs_url']}: {json_response}")
                 continue
             jobs = json_response["jobs"]
 
@@ -95,20 +97,16 @@ class GitHubWorkflowAPI:
                     completed_at = datetime.strptime(
                         job["completed_at"], self.time_format
                     )
-                    started_at = datetime.strptime(
-                        job["started_at"], self.time_format
-                    )
+                    started_at = datetime.strptime(job["started_at"], self.time_format)
                 except TypeError:
                     print(f"Error in parsing {job}")
                     continue
-                run["jobs"][job["name"]] = (
-                    completed_at - started_at
-                ).total_seconds()
+                run["jobs"][job["name"]] = (completed_at - started_at).total_seconds()
                 run["duration"] += run["jobs"][job["name"]]
             print(
-                f"{index+1}/{len(workflow_runs)}: {run['created_at']} "
-                f"{math.floor(run['duration']/60)}m "
-                f"{math.floor(run['duration']%60)}s "
+                f"{index + 1}/{len(workflow_runs)}: {run['created_at']} "
+                f"{math.floor(run['duration'] / 60)}m "
+                f"{math.floor(run['duration'] % 60)}s "
                 f"{run['jobs']} {run['conclusion']}"
             )
 
@@ -119,9 +117,7 @@ class GitHubWorkflowAPI:
         from io import BytesIO
 
         # This endpoint redirects to a zip file
-        endpoint = (
-            f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
-        )
+        endpoint = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/logs"
         response = requests.get(
             endpoint, headers=self.headers, allow_redirects=True
         ).content
@@ -150,9 +146,7 @@ class GithubPullRequestAPI:
     def get_all_pull_requests(self, repo: str):
         payloads = {"per_page": 100, "page": 1, "state": "all"}
         endpoint = f"https://api.github.com/repos/{repo}/pulls"
-        response = requests.get(
-            endpoint, headers=self.headers, params=payloads
-        ).json()
+        response = requests.get(endpoint, headers=self.headers, params=payloads).json()
 
         pull_requests = response
 
@@ -188,11 +182,11 @@ class GithubPackagesAPI:
 
     def get_all_containers(self, org: str, pkg: str):
         payloads = {"per_page": 100, "page": 1}
-        endpoint = f"https://api.github.com/orgs/{org}/packages/container/{pkg}/versions"
+        endpoint = (
+            f"https://api.github.com/orgs/{org}/packages/container/{pkg}/versions"
+        )
         print(f"Fetching packages from {endpoint}")
-        response = requests.get(
-            endpoint, headers=self.headers, params=payloads
-        ).json()
+        response = requests.get(endpoint, headers=self.headers, params=payloads).json()
         packages = response
 
         while len(response) == payloads["per_page"]:

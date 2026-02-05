@@ -1,23 +1,25 @@
-name: measure_workflows
+---
+name: docker-image-size
 
 on:
-  push:
-    branches:
-      - main
   schedule:
-    - cron: '0 0,6,12,18 * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
-  measure_workflows:
+  docker_image_size:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pages: write
-      id-token: write
-      actions: read
     steps:
-      - name: Checkout repository
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout repository (main)
         uses: actions/checkout@v4
 
       - name: Configure Git user's name and email
@@ -42,6 +44,9 @@ jobs:
           ref: data-storage
           path: data-storage
 
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -50,26 +55,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests numpy
-
-      - name: Restore cache
-        uses: actions/cache@v4
-        with:
-          path: cache
-          key: actions
+          pip install requests
 
       - name: Execute script
         run: |
-          mkdir -p cache
-          python scripts/measure_workflows.py \
-            --github_token ${{ github.token }} \
-            --data-dir data-storage
-          cp github_action_data.json public/
+          python scripts/docker_image_size.py \
+            --output-dir data-storage \
+            --github-token ${{ github.token }}
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: public/
+      - name: Check and commit results
+        run: |
+          cd data-storage
+          python ../scripts/check_new_data.py . --commit
 
-      - name: Publish
-        uses: actions/deploy-pages@v4
+      - name: Push changes
+        run: |
+          cd data-storage
+          git push origin data-storage || echo "No changes to push"

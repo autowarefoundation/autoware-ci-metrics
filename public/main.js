@@ -174,115 +174,25 @@ fetch('github_action_data.json')
     );
     dockerBuildAndPushTimeChart.render();
 
-    // Docker
-    const dockerOptions = {
+    // Docker image size chart (compressed)
+    const dockerCompressedOptions = {
       series: [
-        {
-          name: 'core',
-          data: json.docker_images['core'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
         {
           name: 'core-devel',
           data: json.docker_images['core-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'core-common-devel',
-          data: json.docker_images['core-common-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-sensing-perception',
-          data: json.docker_images['universe-sensing-perception'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-sensing-perception-devel',
-          data: json.docker_images['universe-sensing-perception-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-localization-mapping',
-          data: json.docker_images['universe-localization-mapping'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-localization-mapping-devel',
-          data: json.docker_images['universe-localization-mapping-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-planning-control',
-          data: json.docker_images['universe-planning-control'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-planning-control-devel',
-          data: json.docker_images['universe-planning-control-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-visualization',
-          data: json.docker_images['universe-visualization'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-visualization-devel',
-          data: json.docker_images['universe-visualization-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe',
-          data: json.docker_images['universe'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
           }),
         },
         {
           name: 'universe-devel',
           data: json.docker_images['universe-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-common-devel',
-          data: json.docker_images['universe-common-devel'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-sensing-perception-cuda',
-          data: json.docker_images['universe-sensing-perception-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-sensing-perception-devel-cuda',
-          data: json.docker_images['universe-sensing-perception-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-cuda',
-          data: json.docker_images['universe-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
           }),
         },
         {
           name: 'universe-devel-cuda',
           data: json.docker_images['universe-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size / 1024 / 1024 / 1024];
+            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
           }),
         },
       ],
@@ -297,7 +207,7 @@ fetch('github_action_data.json')
         enabled: false,
       },
       title: {
-        text: 'Docker Image Size',
+        text: 'Docker Image Size (compressed)',
         align: 'left',
       },
       xaxis: {
@@ -321,9 +231,72 @@ fetch('github_action_data.json')
       },
     };
 
-    const dockerChart = new ApexCharts(
-      document.querySelector('#docker-chart'),
-      dockerOptions,
+    const dockerChartCompressed = new ApexCharts(
+      document.querySelector('#docker-chart-compressed'),
+      dockerCompressedOptions,
     );
-    dockerChart.render();
+    dockerChartCompressed.render();
+
+    // Docker image size chart (uncompressed)
+    const dockerUncompressedOptions = {
+      series: [
+        {
+          name: 'core-devel',
+          data: json.docker_images['core-devel'].map((data) => {
+            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-devel',
+          data: json.docker_images['universe-devel'].map((data) => {
+            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
+          }),
+        },
+        {
+          name: 'universe-devel-cuda',
+          data: json.docker_images['universe-devel-cuda'].map((data) => {
+            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
+          }),
+        },
+      ],
+      chart: {
+        height: 500,
+        type: 'line',
+        zoom: {
+          enabled: true,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      title: {
+        text: 'Docker Image Size (uncompressed)',
+        align: 'left',
+      },
+      xaxis: {
+        type: 'datetime',
+      },
+      yaxis: {
+        min: 0,
+        labels: {
+          formatter: (val) => `${val.toFixed(2)}GB`,
+        },
+        title: {
+          text: 'Size',
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: function (val) {
+            return `${val.toFixed(2)}GB`;
+          },
+        },
+      },
+    };
+
+    const dockerChartUncompressed = new ApexCharts(
+      document.querySelector('#docker-chart-uncompressed'),
+      dockerUncompressedOptions,
+    );
+    dockerChartUncompressed.render();
   });
