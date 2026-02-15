@@ -175,6 +175,12 @@ fetch('github_action_data.json')
     dockerBuildAndPushTimeChart.render();
 
     // Docker image size chart (compressed)
+    const dockerCompressedData = {
+      'core-devel': json.docker_images['core-devel'],
+      'universe-devel': json.docker_images['universe-devel'],
+      'universe-devel-cuda': json.docker_images['universe-devel-cuda'],
+    };
+
     const dockerCompressedOptions = {
       series: [
         {
@@ -223,10 +229,20 @@ fetch('github_action_data.json')
         },
       },
       tooltip: {
-        y: {
-          formatter: function (val) {
-            return `${val.toFixed(2)}GB`;
-          },
+        custom: function({ series, seriesIndex, dataPointIndex, w }) {
+          const seriesName = w.config.series[seriesIndex].name;
+          const value = series[seriesIndex][dataPointIndex];
+          const digest = dockerCompressedData[seriesName][dataPointIndex].digest;
+
+          let digestStr = '';
+          if (digest && digest.startsWith('sha256:')) {
+            const truncated = digest.substring(0, 19); // "sha256:" (7 chars) + 12 chars = 19
+            digestStr = `<br/>${truncated}...`;
+          }
+
+          return `<div class="apexcharts-tooltip-box" style="padding: 5px 10px;">
+                    <span>${value.toFixed(2)}GB${digestStr}</span>
+                  </div>`;
         },
       },
     };
@@ -238,6 +254,12 @@ fetch('github_action_data.json')
     dockerChartCompressed.render();
 
     // Docker image size chart (uncompressed)
+    const dockerUncompressedData = {
+      'core-devel': json.docker_images['core-devel'],
+      'universe-devel': json.docker_images['universe-devel'],
+      'universe-devel-cuda': json.docker_images['universe-devel-cuda'],
+    };
+
     const dockerUncompressedOptions = {
       series: [
         {
@@ -286,10 +308,20 @@ fetch('github_action_data.json')
         },
       },
       tooltip: {
-        y: {
-          formatter: function (val) {
-            return `${val.toFixed(2)}GB`;
-          },
+        custom: function({ series, seriesIndex, dataPointIndex, w }) {
+          const seriesName = w.config.series[seriesIndex].name;
+          const value = series[seriesIndex][dataPointIndex];
+          const digest = dockerUncompressedData[seriesName][dataPointIndex].digest;
+
+          let digestStr = '';
+          if (digest && digest.startsWith('sha256:')) {
+            const truncated = digest.substring(0, 19); // "sha256:" (7 chars) + 12 chars = 19
+            digestStr = `<br/>${truncated}...`;
+          }
+
+          return `<div class="apexcharts-tooltip-box" style="padding: 5px 10px;">
+                    <span>${value.toFixed(2)}GB${digestStr}</span>
+                  </div>`;
         },
       },
     };
