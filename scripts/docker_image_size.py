@@ -22,10 +22,7 @@ def get_auth_token(github_token: str = "") -> str:
     If github_token is provided, exchange it for a registry access token with pull scope.
     Otherwise, request an anonymous token.
     """
-    url = (
-        f"{REGISTRY_URL}/token?service=ghcr.io"
-        f"&scope=repository:{ORG}/{IMAGE}:pull"
-    )
+    url = f"{REGISTRY_URL}/token?service=ghcr.io&scope=repository:{ORG}/{IMAGE}:pull"
     headers = {}
     if github_token:
         print("Exchanging GitHub token for registry access token")
@@ -42,10 +39,10 @@ def get_auth_token(github_token: str = "") -> str:
     return data.get("token", "")
 
 
-def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int]:
+def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int, str]:
     """Get the compressed size of a Docker image from registry manifest.
 
-    Returns a tuple of (compressed_size_bytes, num_layers).
+    Returns a tuple of (compressed_size_bytes, num_layers, digest).
     """
     try:
         headers = {
@@ -59,9 +56,7 @@ def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int]:
             "application/vnd.docker.distribution.manifest.list.v2+json"
         )
 
-        response = requests.get(
-            manifest_list_url, headers=headers_list, timeout=30
-        )
+        response = requests.get(manifest_list_url, headers=headers_list, timeout=30)
         response.raise_for_status()
         manifest_list = response.json()
 
@@ -109,12 +104,14 @@ def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int]:
         for layer in layers:
             total_compressed += layer.get("size", 0)
 
-        print(f"Compressed size for {tag}: {total_compressed} bytes ({len(layers)} layers)")
-        return total_compressed, len(layers)
+        print(
+            f"Compressed size for {tag}: {total_compressed} bytes ({len(layers)} layers)"
+        )
+        return total_compressed, len(layers), amd64_digest or ""
 
     except Exception as e:
         print(f"Warning: Failed to get compressed size for {tag}: {e}")
-        return 0, 0
+        return 0, 0, ""
 
 
 def get_uncompressed_size(image: str, tag: str) -> int:
@@ -136,7 +133,9 @@ def get_uncompressed_size(image: str, tag: str) -> int:
             # Pull the image
             pull_result = run(
                 [cmd, "pull", "--platform", "linux/amd64", image_ref],
-                stdout=PIPE, stderr=PIPE, text=True
+                stdout=PIPE,
+                stderr=PIPE,
+                text=True,
             )
 
             if pull_result.returncode != 0:
@@ -146,16 +145,23 @@ def get_uncompressed_size(image: str, tag: str) -> int:
             # Get image size using inspect
             inspect_result = run(
                 [cmd, "inspect", image_ref],
-                stdout=PIPE, stderr=PIPE, timeout=30, text=True
+                stdout=PIPE,
+                stderr=PIPE,
+                timeout=30,
+                text=True,
             )
 
             remove_result = run(
                 [cmd, "system", "prune", "--all", "--force"],
-                stdout=PIPE, stderr=PIPE, text=True
+                stdout=PIPE,
+                stderr=PIPE,
+                text=True,
             )
 
             if inspect_result.returncode != 0:
-                print(f"Warning: Failed to inspect image with {cmd}: {inspect_result.stderr}")
+                print(
+                    f"Warning: Failed to inspect image with {cmd}: {inspect_result.stderr}"
+                )
                 continue
 
             inspect_data = json.loads(inspect_result.stdout)
@@ -184,7 +190,7 @@ def get_image_size(token: str, tag: str) -> dict:
     try:
         # Get compressed size from registry manifest
         image = f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}"
-        compressed_size, num_layers = get_compressed_size(image, tag, token)
+        compressed_size, num_layers, digest = get_compressed_size(image, tag, token)
 
         # Get uncompressed size by pulling the image
         image = f"{REGISTRY}/{ORG}/{IMAGE}"
@@ -193,26 +199,20 @@ def get_image_size(token: str, tag: str) -> dict:
         return {
             "tag": tag,
             "compressed_size_bytes": compressed_size,
-            "compressed_size_gb": round(
-                compressed_size / (1024**3), 2
-            ),
+            "compressed_size_gb": round(compressed_size / (1024**3), 2),
             "uncompressed_size_bytes": uncompressed_size,
-            "uncompressed_size_gb": round(
-                uncompressed_size / (1024**3), 2
-            ),
+            "uncompressed_size_gb": round(uncompressed_size / (1024**3), 2),
             "num_layers": num_layers,
-            "fetched_at": (
-                datetime.now(timezone.utc).isoformat()
-            ),
+            "digest": digest,
+            "fetched_at": (datetime.now(timezone.utc).isoformat()),
         }
     except Exception as e:
         print(f"Error fetching size for {tag}: {e}")
         return {
             "tag": tag,
             "error": str(e),
-            "fetched_at": (
-                datetime.now(timezone.utc).isoformat()
-            ),
+            "digest": "",
+            "fetched_at": (datetime.now(timezone.utc).isoformat()),
         }
 
 

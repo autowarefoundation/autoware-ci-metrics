@@ -97,6 +97,7 @@ def get_docker_image_analysis_from_data(date_threshold, data_dir=DATA_DIR):
                             image_data["fetched_at"]
                         ).strftime("%Y/%m/%d %H:%M:%S"),
                         "tag": tag,
+                        "digest": image_data.get("digest", ""),
                     }
                 )
         except Exception as e:
