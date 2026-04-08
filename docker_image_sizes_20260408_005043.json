@@ -1,0 +1,43 @@
+{
+  "registry": "http://ghcr.io",
+  "org": "autowarefoundation",
+  "image": "autoware",
+  "tags": [
+    "universe-devel",
+    "universe-devel-cuda",
+    "core-devel"
+  ],
+  "timestamp": "2026-04-08T00:42:30.854330+00:00",
+  "images": [
+    {
+      "tag": "universe-devel",
+      "compressed_size_bytes": 2621384819,
+      "compressed_size_gb": 2.44,
+      "uncompressed_size_bytes": 7839593808,
+      "uncompressed_size_gb": 7.3,
+      "num_layers": 45,
+      "digest": "sha256:e4f66d618ef3f0ce68a1039d0bfcee7a9e5657bd7436f676c3f6db2a37194559",
+      "fetched_at": "2026-04-08T00:44:18.172755+00:00"
+    },
+    {
+      "tag": "universe-devel-cuda",
+      "compressed_size_bytes": 12081354329,
+      "compressed_size_gb": 11.25,
+      "uncompressed_size_bytes": 23607336857,
+      "uncompressed_size_gb": 21.99,
+      "num_layers": 40,
+      "digest": "sha256:4b0318b2584e21ee2b7ebfb761756a2a06c90f02aca030200e9f88c380943ddb",
+      "fetched_at": "2026-04-08T00:49:26.041744+00:00"
+    },
+    {
+      "tag": "core-devel",
+      "compressed_size_bytes": 2055487282,
+      "compressed_size_gb": 1.91,
+      "uncompressed_size_bytes": 5467672075,
+      "uncompressed_size_gb": 5.09,
+      "num_layers": 32,
+      "digest": "sha256:cdf475656cf8ab9a58f1d21615800a9862f270a0d3d2d943dc57cf21c28a340b",
+      "fetched_at": "2026-04-08T00:50:43.514189+00:00"
+    }
+  ]
+}
