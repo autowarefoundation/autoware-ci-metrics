@@ -1,0 +1,76 @@
+{
+  "registry": "http://ghcr.io",
+  "org": "autowarefoundation",
+  "image": "autoware",
+  "tags": [
+    "core-devel",
+    "universe-devel",
+    "universe-devel-cuda",
+    "core-devel-jazzy",
+    "universe-devel-jazzy",
+    "universe-devel-jazzy-cuda"
+  ],
+  "timestamp": "2026-04-11T19:51:00.884397+00:00",
+  "images": [
+    {
+      "tag": "core-devel",
+      "compressed_size_bytes": 2056739902,
+      "compressed_size_gb": 2.06,
+      "uncompressed_size_bytes": 7936078874,
+      "uncompressed_size_gb": 7.94,
+      "num_layers": 32,
+      "digest": "sha256:aff671f5a1d6fdc2de0d9391d953b53e7655129389dcb0b63cb778df432cd282",
+      "fetched_at": "2026-04-11T19:51:45.780829+00:00"
+    },
+    {
+      "tag": "universe-devel",
+      "compressed_size_bytes": 2629740975,
+      "compressed_size_gb": 2.63,
+      "uncompressed_size_bytes": 11100442616,
+      "uncompressed_size_gb": 11.1,
+      "num_layers": 45,
+      "digest": "sha256:4eab74badd4e4582d0952740c56e540542dc0f9d917c32a2da03e312fd3f66aa",
+      "fetched_at": "2026-04-11T19:52:06.380873+00:00"
+    },
+    {
+      "tag": "universe-devel-cuda",
+      "compressed_size_bytes": 12083469123,
+      "compressed_size_gb": 12.08,
+      "uncompressed_size_bytes": 36436691186,
+      "uncompressed_size_gb": 36.44,
+      "num_layers": 40,
+      "digest": "sha256:9ba26b6c6a2d25feb579aecb8ebdced5e85da41bb6ab2de08e2181a5b063950f",
+      "fetched_at": "2026-04-11T19:57:11.076846+00:00"
+    },
+    {
+      "tag": "core-devel-jazzy",
+      "compressed_size_bytes": 2199430391,
+      "compressed_size_gb": 2.2,
+      "uncompressed_size_bytes": 8534072709,
+      "uncompressed_size_gb": 8.53,
+      "num_layers": 32,
+      "digest": "sha256:83ab3e075073a25546ceb41474ef5eb07f0ac80d7bb6e6202774a910cecaf8db",
+      "fetched_at": "2026-04-11T19:58:11.717311+00:00"
+    },
+    {
+      "tag": "universe-devel-jazzy",
+      "compressed_size_bytes": 2771217396,
+      "compressed_size_gb": 2.77,
+      "uncompressed_size_bytes": 11729535719,
+      "uncompressed_size_gb": 11.73,
+      "num_layers": 45,
+      "digest": "sha256:d5572e55b85c4f60d3e8a5e4fe81f7111bf899a4486899a5a780ae1330b8053a",
+      "fetched_at": "2026-04-11T19:58:32.065109+00:00"
+    },
+    {
+      "tag": "universe-devel-jazzy-cuda",
+      "compressed_size_bytes": 12234980948,
+      "compressed_size_gb": 12.23,
+      "uncompressed_size_bytes": 37139664041,
+      "uncompressed_size_gb": 37.14,
+      "num_layers": 40,
+      "digest": "sha256:d69cc70e50d5d8c80f4508c1a85d47d66c15cc2405f78d3519c4d71451651b13",
+      "fetched_at": "2026-04-11T20:03:29.048967+00:00"
+    }
+  ]
+}
