@@ -12,15 +12,20 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v5
+        with:
+          set-host: true
+
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository (main)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure Git user's name and email
         run: |
@@ -39,29 +44,41 @@ jobs:
           fi
 
       - name: Checkout data branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: data-storage
           path: data-storage
 
+      - name: Check available disk space
+        id: disk-space
+        run: |
+          df -h /
+          avail_gb=$(df --output=avail / | tail -1 | awk '{printf "%d", $1/1024/1024}')
+          echo "available_gb=$avail_gb" >> "$GITHUB_OUTPUT"
+
       - name: Free Disk Space (Ubuntu)
+        if: steps.disk-space.outputs.available_gb < 40
         uses: jlumbroso/free-disk-space@main
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
+        run: pip install requests
 
       - name: Execute script
         run: |
           python scripts/docker_image_size.py \
             --output-dir data-storage \
             --github-token ${{ github.token }}
+
+      - name: Disk space and image sizes after script
+        run: |
+          df -h /
+          docker image ls
+          docker version
 
       - name: Check and commit results
         run: |
