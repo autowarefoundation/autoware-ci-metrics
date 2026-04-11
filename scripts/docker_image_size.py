@@ -16,7 +16,14 @@ REGISTRY = "ghcr.io"
 REGISTRY_URL = f"http://{REGISTRY}"
 ORG = "autowarefoundation"
 IMAGE = "autoware"
-TAGS = ["core-devel", "universe-devel", "universe-devel-cuda"]
+TAGS = [
+    "core-devel",
+    "universe-devel",
+    "universe-devel-cuda",
+    "core-devel-jazzy",
+    "universe-devel-jazzy",
+    "universe-devel-jazzy-cuda",
+]
 OUTPUT_DIR = "data/docker_image_sizes"
 OUTPUT_FILE_TEMPLATE = "docker_image_sizes_{timestamp}.json"
 

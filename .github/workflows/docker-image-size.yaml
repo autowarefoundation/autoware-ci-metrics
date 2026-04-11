@@ -57,7 +57,7 @@ jobs:
           echo "available_gb=$avail_gb" >> "$GITHUB_OUTPUT"
 
       - name: Free Disk Space (Ubuntu)
-        if: steps.disk-space.outputs.available_gb < 40
+        if: steps.disk-space.outputs.available_gb < 80
         uses: jlumbroso/free-disk-space@main
 
       - name: Set up Python

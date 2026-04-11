@@ -71,6 +71,9 @@ def get_docker_image_analysis_from_data(date_threshold, data_dir=DATA_DIR):
         "core-devel": [],
         "universe-devel": [],
         "universe-devel-cuda": [],
+        "core-devel-jazzy": [],
+        "universe-devel-jazzy": [],
+        "universe-devel-jazzy-cuda": [],
     }
 
     # Find all JSON files in the data directory
