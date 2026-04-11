@@ -209,9 +209,9 @@ def get_image_size(token: str, tag: str) -> dict:
         return {
             "tag": tag,
             "compressed_size_bytes": compressed_size,
-            "compressed_size_gb": round(compressed_size / (1024**3), 2),
+            "compressed_size_gb": round(compressed_size / (1000**3), 2),
             "uncompressed_size_bytes": uncompressed_size,
-            "uncompressed_size_gb": round(uncompressed_size / (1024**3), 2),
+            "uncompressed_size_gb": round(uncompressed_size / (1000**3), 2),
             "num_layers": num_layers,
             "digest": digest,
             "fetched_at": (datetime.now(timezone.utc).isoformat()),

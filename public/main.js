@@ -187,7 +187,7 @@ fetch('github_action_data.json')
     const dockerCompressedOptions = {
       series: Object.entries(dockerCompressedData).map(([name, data]) => ({
         name,
-        data: data.map((d) => [new Date(d.date), d.size_compressed / 1024 / 1024 / 1024]),
+        data: data.map((d) => [new Date(d.date), d.size_compressed / 1000 / 1000 / 1000]),
       })),
       chart: {
         height: 500,
@@ -253,7 +253,7 @@ fetch('github_action_data.json')
     const dockerUncompressedOptions = {
       series: Object.entries(dockerUncompressedData).map(([name, data]) => ({
         name,
-        data: data.map((d) => [new Date(d.date), d.size_uncompressed / 1024 / 1024 / 1024]),
+        data: data.map((d) => [new Date(d.date), d.size_uncompressed / 1000 / 1000 / 1000]),
       })),
       chart: {
         height: 500,
