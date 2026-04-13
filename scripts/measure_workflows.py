@@ -1,7 +1,10 @@
 import argparse
+import functools
 import json
 import pathlib
 from datetime import datetime, timedelta, timezone
+
+print = functools.partial(print, flush=True)
 
 import github_api
 from colcon_log_analyzer import ColconLogAnalyzer
@@ -68,6 +71,9 @@ def get_docker_image_analysis_from_data(date_threshold, data_dir=DATA_DIR):
         "core-devel": [],
         "universe-devel": [],
         "universe-devel-cuda": [],
+        "core-devel-jazzy": [],
+        "universe-devel-jazzy": [],
+        "universe-devel-jazzy-cuda": [],
     }
 
     # Find all JSON files in the data directory
@@ -197,11 +203,19 @@ if __name__ == "__main__":
     github_token = args.github_token
 
     date_threshold = datetime.now(timezone.utc) - timedelta(days=90)
+    print(f"Fetching workflow runs since {date_threshold.date()}")
     (
         health_check,
         docker_build_and_push,
     ) = get_workflow_runs(github_token, date_threshold)
+    print(f"  health-check: {len(health_check)} runs")
+    print(f"  docker-build-and-push: {len(docker_build_and_push)} runs")
+
+    print(f"Loading docker image data from {args.data_dir}")
     docker_images = get_docker_image_analysis_from_data(date_threshold, args.data_dir)
+    for tag, entries in docker_images.items():
+        print(f"  {tag}: {len(entries)} data points")
+
     json_data = export_to_json(
         health_check,
         docker_build_and_push,
@@ -210,3 +224,4 @@ if __name__ == "__main__":
 
     with open("github_action_data.json", "w") as jsonfile:
         json.dump(json_data, jsonfile, indent=4)
+    print(f"Wrote github_action_data.json")

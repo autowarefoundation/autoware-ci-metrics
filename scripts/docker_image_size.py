@@ -1,17 +1,29 @@
 import argparse
+import functools
+import http.client
 import json
 import os
 import pathlib
+import socket
 from datetime import datetime, timezone
 
 import requests
 from subprocess import run, PIPE
 
+print = functools.partial(print, flush=True)
+
 REGISTRY = "ghcr.io"
 REGISTRY_URL = f"http://{REGISTRY}"
 ORG = "autowarefoundation"
 IMAGE = "autoware"
-TAGS = ["universe-devel", "universe-devel-cuda", "core-devel"]
+TAGS = [
+    "core-devel",
+    "universe-devel",
+    "universe-devel-cuda",
+    "core-devel-jazzy",
+    "universe-devel-jazzy",
+    "universe-devel-jazzy-cuda",
+]
 OUTPUT_DIR = "data/docker_image_sizes"
 OUTPUT_FILE_TEMPLATE = "docker_image_sizes_{timestamp}.json"
 
@@ -114,8 +126,32 @@ def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int, str
         return 0, 0, ""
 
 
+def get_image_disk_usage(image_ref: str) -> int:
+    """Get the on-disk size of a Docker image via the Docker Engine API.
+
+    Queries /images/json which returns accurate disk usage in raw bytes,
+    unlike 'docker inspect' whose Size field varies across storage backends.
+    Reads the DOCKER_HOST env var for the socket path.
+    """
+    docker_host = os.environ.get("DOCKER_HOST", "unix:///var/run/docker.sock")
+    sock_path = docker_host.replace("unix://", "")
+    try:
+        conn = http.client.HTTPConnection("localhost")
+        conn.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        conn.sock.connect(sock_path)
+        conn.request("GET", "/v1.47/images/json")
+        resp = conn.getresponse()
+        for img in json.loads(resp.read()):
+            tags = img.get("RepoTags") or []
+            if image_ref in tags:
+                return img.get("Size", 0)
+    except Exception as e:
+        print(f"Warning: Failed to query Docker Engine API at {sock_path}: {e}")
+    return 0
+
+
 def get_uncompressed_size(image: str, tag: str) -> int:
-    """Get the uncompressed size of a Docker image by pulling it.
+    """Get the uncompressed (on-disk) size of a Docker image by pulling it.
 
     Tries docker first, falls back to podman if docker is not available.
     Returns size in bytes, or 0 if unable to determine.
@@ -132,7 +168,7 @@ def get_uncompressed_size(image: str, tag: str) -> int:
 
             # Pull the image
             pull_result = run(
-                [cmd, "pull", "--platform", "linux/amd64", image_ref],
+                [cmd, "pull", "--quiet", "--platform", "linux/amd64", image_ref],
                 stdout=PIPE,
                 stderr=PIPE,
                 text=True,
@@ -142,40 +178,14 @@ def get_uncompressed_size(image: str, tag: str) -> int:
                 print(f"Warning: Failed to pull image with {cmd}: {pull_result.stderr}")
                 continue
 
-            # Get image size using inspect
-            inspect_result = run(
-                [cmd, "inspect", image_ref],
-                stdout=PIPE,
-                stderr=PIPE,
-                timeout=30,
-                text=True,
-            )
+            # Get on-disk size via Docker Engine API
+            size = get_image_disk_usage(image_ref)
 
-            remove_result = run(
-                [cmd, "system", "prune", "--all", "--force"],
-                stdout=PIPE,
-                stderr=PIPE,
-                text=True,
-            )
+            if size > 0:
+                print(f"Uncompressed size for {image_ref}: {size} bytes")
+                return size
 
-            if inspect_result.returncode != 0:
-                print(
-                    f"Warning: Failed to inspect image with {cmd}: {inspect_result.stderr}"
-                )
-                continue
-
-            inspect_data = json.loads(inspect_result.stdout)
-            if not inspect_data:
-                continue
-
-            # Get Size field (uncompressed size)
-            size = inspect_data[0].get("Size", 0)
-
-            # Clean up the image
-            run([cmd, "rmi", image_ref], stdout=PIPE, stderr=PIPE, timeout=30)
-
-            print(f"Uncompressed size for {image_ref}: {size} bytes")
-            return size
+            print(f"Warning: Could not find {image_ref} in Docker Engine API output")
 
         except Exception as e:
             print(f"Warning: Error with {cmd}: {e}")
@@ -199,9 +209,9 @@ def get_image_size(token: str, tag: str) -> dict:
         return {
             "tag": tag,
             "compressed_size_bytes": compressed_size,
-            "compressed_size_gb": round(compressed_size / (1024**3), 2),
+            "compressed_size_gb": round(compressed_size / (1000**3), 2),
             "uncompressed_size_bytes": uncompressed_size,
-            "uncompressed_size_gb": round(uncompressed_size / (1024**3), 2),
+            "uncompressed_size_gb": round(uncompressed_size / (1000**3), 2),
             "num_layers": num_layers,
             "digest": digest,
             "fetched_at": (datetime.now(timezone.utc).isoformat()),

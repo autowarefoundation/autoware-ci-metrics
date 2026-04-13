@@ -176,32 +176,19 @@ fetch('github_action_data.json')
 
     // Docker image size chart (compressed)
     const dockerCompressedData = {
-      'core-devel': json.docker_images['core-devel'],
-      'universe-devel': json.docker_images['universe-devel'],
-      'universe-devel-cuda': json.docker_images['universe-devel-cuda'],
+      'core-devel': json.docker_images['core-devel'] || [],
+      'core-devel-jazzy': json.docker_images['core-devel-jazzy'] || [],
+      'universe-devel': json.docker_images['universe-devel'] || [],
+      'universe-devel-jazzy': json.docker_images['universe-devel-jazzy'] || [],
+      'universe-devel-cuda': json.docker_images['universe-devel-cuda'] || [],
+      'universe-devel-jazzy-cuda': json.docker_images['universe-devel-jazzy-cuda'] || [],
     };
 
     const dockerCompressedOptions = {
-      series: [
-        {
-          name: 'core-devel',
-          data: json.docker_images['core-devel'].map((data) => {
-            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-devel',
-          data: json.docker_images['universe-devel'].map((data) => {
-            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-devel-cuda',
-          data: json.docker_images['universe-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size_compressed / 1024 / 1024 / 1024];
-          }),
-        },
-      ],
+      series: Object.entries(dockerCompressedData).map(([name, data]) => ({
+        name,
+        data: data.map((d) => [new Date(d.date), d.size_compressed / 1000 / 1000 / 1000]),
+      })),
       chart: {
         height: 500,
         type: 'line',
@@ -255,32 +242,19 @@ fetch('github_action_data.json')
 
     // Docker image size chart (uncompressed)
     const dockerUncompressedData = {
-      'core-devel': json.docker_images['core-devel'],
-      'universe-devel': json.docker_images['universe-devel'],
-      'universe-devel-cuda': json.docker_images['universe-devel-cuda'],
+      'core-devel': json.docker_images['core-devel'] || [],
+      'core-devel-jazzy': json.docker_images['core-devel-jazzy'] || [],
+      'universe-devel': json.docker_images['universe-devel'] || [],
+      'universe-devel-jazzy': json.docker_images['universe-devel-jazzy'] || [],
+      'universe-devel-cuda': json.docker_images['universe-devel-cuda'] || [],
+      'universe-devel-jazzy-cuda': json.docker_images['universe-devel-jazzy-cuda'] || [],
     };
 
     const dockerUncompressedOptions = {
-      series: [
-        {
-          name: 'core-devel',
-          data: json.docker_images['core-devel'].map((data) => {
-            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-devel',
-          data: json.docker_images['universe-devel'].map((data) => {
-            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
-          }),
-        },
-        {
-          name: 'universe-devel-cuda',
-          data: json.docker_images['universe-devel-cuda'].map((data) => {
-            return [new Date(data.date), data.size_uncompressed / 1024 / 1024 / 1024];
-          }),
-        },
-      ],
+      series: Object.entries(dockerUncompressedData).map(([name, data]) => ({
+        name,
+        data: data.map((d) => [new Date(d.date), d.size_uncompressed / 1000 / 1000 / 1000]),
+      })),
       chart: {
         height: 500,
         type: 'line',
