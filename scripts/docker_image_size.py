@@ -16,14 +16,19 @@ REGISTRY = "ghcr.io"
 REGISTRY_URL = f"http://{REGISTRY}"
 ORG = "autowarefoundation"
 IMAGE = "autoware"
-TAGS = [
-    "core-dependencies-humble",
-    "universe-dependencies-humble",
-    "universe-dependencies-cuda-humble",
-    "core-dependencies-jazzy",
-    "universe-dependencies-jazzy",
-    "universe-dependencies-cuda-jazzy",
+TAG_GROUPS = [
+    [
+        "core-dependencies-humble",
+        "universe-dependencies-humble",
+        "universe-dependencies-cuda-humble",
+    ],
+    [
+        "core-dependencies-jazzy",
+        "universe-dependencies-jazzy",
+        "universe-dependencies-cuda-jazzy",
+    ],
 ]
+TAGS = [tag for group in TAG_GROUPS for tag in group]
 OUTPUT_DIR = "data/docker_image_sizes"
 OUTPUT_FILE_TEMPLATE = "docker_image_sizes_{timestamp}.json"
 
@@ -195,6 +200,32 @@ def get_uncompressed_size(image: str, tag: str) -> int:
     return 0
 
 
+def remove_docker_images(image: str, tags: list[str]) -> None:
+    """Remove pulled images and dangling data to free disk space."""
+    image_refs = [f"{image}:{tag}" for tag in tags]
+    for cmd in ["docker", "podman"]:
+        try:
+            check_result = run([cmd, "--version"], stdout=PIPE, stderr=PIPE, timeout=5)
+            if check_result.returncode != 0:
+                continue
+            print(f"Pruning images with {cmd}: {image_refs}")
+            run(
+                [cmd, "rmi", "-f", *image_refs],
+                stdout=PIPE,
+                stderr=PIPE,
+                timeout=300,
+            )
+            run(
+                [cmd, "system", "prune", "-a", "-f", "--volumes"],
+                stdout=PIPE,
+                stderr=PIPE,
+                timeout=300,
+            )
+            return
+        except Exception as e:
+            print(f"Warning: prune failed with {cmd}: {e}")
+
+
 def get_image_size(token: str, tag: str) -> dict:
     """Get the compressed and uncompressed size of a Docker image."""
     try:
@@ -263,19 +294,22 @@ def main():
     print(f"Results")
     print(results)
 
-    for tag in TAGS:
-        print(f"Fetching size for tag: {tag}")
-        size_info = get_image_size(token, tag)
-        results["images"].append(size_info)
-        if "error" not in size_info:
-            print(
-                f"  {tag}: "
-                f"{size_info['compressed_size_gb']} GB (compressed), "
-                f"{size_info['uncompressed_size_gb']} GB (uncompressed) "
-                f"with {size_info['num_layers']} layers"
-            )
-        else:
-            print(f"  {tag}: Error - {size_info['error']}")
+    pull_image = f"{REGISTRY}/{ORG}/{IMAGE}"
+    for group in TAG_GROUPS:
+        for tag in group:
+            print(f"Fetching size for tag: {tag}")
+            size_info = get_image_size(token, tag)
+            results["images"].append(size_info)
+            if "error" not in size_info:
+                print(
+                    f"  {tag}: "
+                    f"{size_info['compressed_size_gb']} GB (compressed), "
+                    f"{size_info['uncompressed_size_gb']} GB (uncompressed) "
+                    f"with {size_info['num_layers']} layers"
+                )
+            else:
+                print(f"  {tag}: Error - {size_info['error']}")
+        remove_docker_images(pull_image, group)
 
     # Save results with timestamp
     output_dir = pathlib.Path(args.output_dir)
