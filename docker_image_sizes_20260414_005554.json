@@ -3,17 +3,17 @@
   "org": "autowarefoundation",
   "image": "autoware",
   "tags": [
-    "core-devel",
-    "universe-devel",
-    "universe-devel-cuda",
-    "core-devel-jazzy",
-    "universe-devel-jazzy",
-    "universe-devel-jazzy-cuda"
+    "core-dependencies-humble",
+    "universe-dependencies-humble",
+    "universe-dependencies-cuda-humble",
+    "core-dependencies-jazzy",
+    "universe-dependencies-jazzy",
+    "universe-dependencies-cuda-jazzy"
   ],
   "timestamp": "2026-04-14T00:44:57.618733+00:00",
   "images": [
     {
-      "tag": "core-devel",
+      "tag": "core-dependencies-humble",
       "compressed_size_bytes": 2056826810,
       "compressed_size_gb": 2.06,
       "uncompressed_size_bytes": 7936219031,
@@ -23,7 +23,7 @@
       "fetched_at": "2026-04-14T00:45:42.022378+00:00"
     },
     {
-      "tag": "universe-devel",
+      "tag": "universe-dependencies-humble",
       "compressed_size_bytes": 2624239039,
       "compressed_size_gb": 2.62,
       "uncompressed_size_bytes": 11079474186,
@@ -33,7 +33,7 @@
       "fetched_at": "2026-04-14T00:46:02.254808+00:00"
     },
     {
-      "tag": "universe-devel-cuda",
+      "tag": "universe-dependencies-cuda-humble",
       "compressed_size_bytes": 12083654116,
       "compressed_size_gb": 12.08,
       "uncompressed_size_bytes": 36437130132,
@@ -43,7 +43,7 @@
       "fetched_at": "2026-04-14T00:50:43.777022+00:00"
     },
     {
-      "tag": "core-devel-jazzy",
+      "tag": "core-dependencies-jazzy",
       "compressed_size_bytes": 2191880103,
       "compressed_size_gb": 2.19,
       "uncompressed_size_bytes": 8502368122,
@@ -53,7 +53,7 @@
       "fetched_at": "2026-04-14T00:51:34.030909+00:00"
     },
     {
-      "tag": "universe-devel-jazzy",
+      "tag": "universe-dependencies-jazzy",
       "compressed_size_bytes": 2763375463,
       "compressed_size_gb": 2.76,
       "uncompressed_size_bytes": 11695081889,
@@ -63,7 +63,7 @@
       "fetched_at": "2026-04-14T00:51:53.526291+00:00"
     },
     {
-      "tag": "universe-devel-jazzy-cuda",
+      "tag": "universe-dependencies-cuda-jazzy",
       "compressed_size_bytes": 12228595847,
       "compressed_size_gb": 12.23,
       "uncompressed_size_bytes": 37118713386,
