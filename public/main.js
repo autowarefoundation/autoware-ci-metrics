@@ -176,12 +176,12 @@ fetch('github_action_data.json')
 
     // Docker image size chart (compressed)
     const dockerCompressedData = {
-      'core-devel': json.docker_images['core-devel'] || [],
-      'core-devel-jazzy': json.docker_images['core-devel-jazzy'] || [],
-      'universe-devel': json.docker_images['universe-devel'] || [],
-      'universe-devel-jazzy': json.docker_images['universe-devel-jazzy'] || [],
-      'universe-devel-cuda': json.docker_images['universe-devel-cuda'] || [],
-      'universe-devel-jazzy-cuda': json.docker_images['universe-devel-jazzy-cuda'] || [],
+      'core-dependencies-humble': json.docker_images['core-dependencies-humble'] || [],
+      'core-dependencies-jazzy': json.docker_images['core-dependencies-jazzy'] || [],
+      'universe-dependencies-humble': json.docker_images['universe-dependencies-humble'] || [],
+      'universe-dependencies-jazzy': json.docker_images['universe-dependencies-jazzy'] || [],
+      'universe-dependencies-cuda-humble': json.docker_images['universe-dependencies-cuda-humble'] || [],
+      'universe-dependencies-cuda-jazzy': json.docker_images['universe-dependencies-cuda-jazzy'] || [],
     };
 
     const dockerCompressedOptions = {
@@ -242,12 +242,12 @@ fetch('github_action_data.json')
 
     // Docker image size chart (uncompressed)
     const dockerUncompressedData = {
-      'core-devel': json.docker_images['core-devel'] || [],
-      'core-devel-jazzy': json.docker_images['core-devel-jazzy'] || [],
-      'universe-devel': json.docker_images['universe-devel'] || [],
-      'universe-devel-jazzy': json.docker_images['universe-devel-jazzy'] || [],
-      'universe-devel-cuda': json.docker_images['universe-devel-cuda'] || [],
-      'universe-devel-jazzy-cuda': json.docker_images['universe-devel-jazzy-cuda'] || [],
+      'core-dependencies-humble': json.docker_images['core-dependencies-humble'] || [],
+      'core-dependencies-jazzy': json.docker_images['core-dependencies-jazzy'] || [],
+      'universe-dependencies-humble': json.docker_images['universe-dependencies-humble'] || [],
+      'universe-dependencies-jazzy': json.docker_images['universe-dependencies-jazzy'] || [],
+      'universe-dependencies-cuda-humble': json.docker_images['universe-dependencies-cuda-humble'] || [],
+      'universe-dependencies-cuda-jazzy': json.docker_images['universe-dependencies-cuda-jazzy'] || [],
     };
 
     const dockerUncompressedOptions = {
