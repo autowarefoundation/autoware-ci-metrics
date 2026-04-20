@@ -3,3 +3,4 @@ cache/*
 venv/
 github_action_data.json
 data-storage/
+.idea/
