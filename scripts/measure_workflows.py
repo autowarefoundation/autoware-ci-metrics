@@ -43,6 +43,16 @@ WORKFLOWS = {
     },
 }
 
+# Status-aware per-repo CI tracking for the swimlane chart. Unlike WORKFLOWS
+# above, this keeps non-success runs (failure/cancelled/skipped) so the
+# dashboard can color them, and it carries commit metadata + run URL so
+# each dot links back to the actual run.
+MULTI_REPO_WORKFLOWS = [
+    {"repo": "autowarefoundation/autoware_core",     "workflow_id": "build-and-test.yaml"},
+    {"repo": "autowarefoundation/autoware_universe", "workflow_id": "build-and-test.yaml"},
+    {"repo": "autowarefoundation/autoware_tools",    "workflow_id": "build-and-test.yaml"},
+]
+
 
 def workflow_basename(workflow_id: str) -> str:
     if workflow_id.endswith(".yaml"):
@@ -176,6 +186,129 @@ def collect_workflow_runs(
     return combined
 
 
+def repo_short_name(repo: str) -> str:
+    return repo.rsplit("/", 1)[-1]
+
+
+def multi_repo_runs_dir(data_dir: pathlib.Path, repo: str) -> pathlib.Path:
+    return workflow_runs_dir(data_dir) / repo_short_name(repo)
+
+
+def load_existing_multi_repo_runs(
+    data_dir: pathlib.Path, repo: str, workflow_id: str
+) -> tuple[set, Optional[datetime], list[dict]]:
+    base = workflow_basename(workflow_id)
+    files = sorted(multi_repo_runs_dir(data_dir, repo).glob(f"{base}-*.jsonl"))
+    run_ids: set = set()
+    max_dt: Optional[datetime] = None
+    entries: list[dict] = []
+    for path in files:
+        with path.open() as f:
+            for line in f:
+                entry = json.loads(line)
+                entry["created_at"] = datetime.fromisoformat(entry["created_at"])
+                entries.append(entry)
+                run_ids.add(entry["run_id"])
+                if max_dt is None or entry["created_at"] > max_dt:
+                    max_dt = entry["created_at"]
+    return run_ids, max_dt, entries
+
+
+def append_multi_repo_runs(
+    data_dir: pathlib.Path, repo: str, workflow_id: str, runs: list[dict]
+) -> int:
+    if not runs:
+        return 0
+    base = workflow_basename(workflow_id)
+    out_dir = multi_repo_runs_dir(data_dir, repo)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    by_year: dict[int, list[dict]] = defaultdict(list)
+    for run in runs:
+        by_year[run["created_at"].year].append(run)
+
+    total = 0
+    for year, year_runs in sorted(by_year.items()):
+        year_runs.sort(key=lambda r: r["created_at"])
+        path = out_dir / f"{base}-{year}.jsonl"
+        with path.open("a") as f:
+            for run in year_runs:
+                f.write(
+                    json.dumps(
+                        {
+                            "run_id": run["id"],
+                            "created_at": run["created_at"].isoformat(),
+                            "duration": run["duration"],
+                            "conclusion": run["conclusion"],
+                            "html_url": run.get("html_url", ""),
+                            "head_sha": run.get("head_sha", ""),
+                            "commit_title": run.get("commit_title", ""),
+                        }
+                    )
+                    + "\n"
+                )
+                total += 1
+        print(f"    appended {len(year_runs)} -> {path}")
+    return total
+
+
+def collect_multi_repo_runs(
+    repo: str, workflow_id: str, data_dir: pathlib.Path, github_token: str
+) -> list[dict]:
+    """Scrape a single (repo, workflow) pair for the swimlane chart.
+
+    Retains all terminal conclusions (not only success), writes a richer
+    schema with html_url + head_sha + commit_title for hover/click UX.
+    """
+    print(f"{repo} :: {workflow_id}")
+    existing_ids, max_dt, existing_entries = load_existing_multi_repo_runs(
+        data_dir, repo, workflow_id
+    )
+
+    if max_dt is None:
+        cursor = datetime.now(timezone.utc) - timedelta(days=BACKFILL_DAYS)
+        print(f"  no existing data; backfilling from {cursor.date()}")
+    else:
+        cursor = max_dt - CURSOR_OVERLAP
+        print(
+            f"  existing through {max_dt.isoformat()}; fetching since {cursor.isoformat()}"
+        )
+
+    api = github_api.GitHubWorkflowAPI(github_token)
+    fetched = api.get_workflow_duration_list(
+        repo,
+        workflow_id,
+        accurate=False,
+        created_after=cursor,
+        event="push",
+        branch="main",
+        only_success=False,
+    )
+    print(f"  fetched {len(fetched)} runs from API")
+
+    new_runs = [r for r in fetched if r["id"] not in existing_ids]
+    print(f"  new (deduped): {len(new_runs)}")
+
+    append_multi_repo_runs(data_dir, repo, workflow_id, new_runs)
+
+    for entry in existing_entries:
+        entry["id"] = entry["run_id"]
+    combined = existing_entries + [
+        {
+            "id": r["id"],
+            "created_at": r["created_at"],
+            "duration": r["duration"],
+            "conclusion": r["conclusion"],
+            "html_url": r.get("html_url", ""),
+            "head_sha": r.get("head_sha", ""),
+            "commit_title": r.get("commit_title", ""),
+        }
+        for r in new_runs
+    ]
+    combined.sort(key=lambda r: r["created_at"])
+    return combined
+
+
 def load_docker_image_history(data_dir: pathlib.Path) -> dict:
     """Read all yearly docker JSONL files into the dashboard-shaped dict."""
     docker_images: dict[str, list[dict]] = {tag: [] for tag in CANONICAL_TAGS}
@@ -205,7 +338,7 @@ def load_docker_image_history(data_dir: pathlib.Path) -> dict:
     return docker_images
 
 
-def export_to_json(health_check, docker_build_and_push, docker_images):
+def export_to_json(health_check, docker_build_and_push, docker_images, repo_ci_runs):
     def _export_health_check(workflow):
         out = []
         for run in workflow:
@@ -243,6 +376,23 @@ def export_to_json(health_check, docker_build_and_push, docker_images):
             for run in workflow
         ]
 
+    def _export_repo_ci_runs(runs_by_repo):
+        out: dict[str, list[dict]] = {}
+        for repo_key, runs in runs_by_repo.items():
+            out[repo_key] = [
+                {
+                    "run_id": r["id"],
+                    "date": r["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
+                    "duration": r["duration"],
+                    "conclusion": r["conclusion"],
+                    "html_url": r.get("html_url", ""),
+                    "head_sha": r.get("head_sha", ""),
+                    "commit_title": r.get("commit_title", ""),
+                }
+                for r in runs
+            ]
+        return out
+
     return {
         "workflow_time": {
             "health-check": _export_health_check(health_check),
@@ -251,6 +401,7 @@ def export_to_json(health_check, docker_build_and_push, docker_images):
             ),
         },
         "docker_images": docker_images,
+        "repo_ci_runs": _export_repo_ci_runs(repo_ci_runs),
     }
 
 
@@ -278,10 +429,18 @@ if __name__ == "__main__":
         "docker-build-and-push", args.data_dir, args.github_token
     )
 
+    repo_ci_runs: dict[str, list[dict]] = {}
+    for spec in MULTI_REPO_WORKFLOWS:
+        repo_ci_runs[repo_short_name(spec["repo"])] = collect_multi_repo_runs(
+            spec["repo"], spec["workflow_id"], args.data_dir, args.github_token
+        )
+
     print(f"Loading docker image history from {args.data_dir}")
     docker_images = load_docker_image_history(args.data_dir)
 
-    json_data = export_to_json(health_check, docker_build_and_push, docker_images)
+    json_data = export_to_json(
+        health_check, docker_build_and_push, docker_images, repo_ci_runs
+    )
     with open("github_action_data.json", "w") as f:
         json.dump(json_data, f, indent=4)
     print("Wrote github_action_data.json")

@@ -30,12 +30,16 @@
       </p>
 
       <div class="btn-group mb-3" role="group" aria-label="Time window">
-        <button type="button" class="btn btn-outline-primary" data-duration="7d">7d</button>
+        <button type="button" class="btn btn-outline-primary" data-duration="1d">1d</button>
+        <button type="button" class="btn btn-outline-primary active" data-duration="7d">7d</button>
         <button type="button" class="btn btn-outline-primary" data-duration="30d">30d</button>
-        <button type="button" class="btn btn-outline-primary active" data-duration="90d">90d</button>
+        <button type="button" class="btn btn-outline-primary" data-duration="90d">90d</button>
         <button type="button" class="btn btn-outline-primary" data-duration="1y">1y</button>
         <button type="button" class="btn btn-outline-primary" data-duration="all">All</button>
       </div>
+
+      <h2>Critical workflow runs (push to main)</h2>
+      <div id="repo-swimlane-chart"></div>
 
       <h2>Docker image sizes (uncompressed)</h2>
       <div id="docker-chart-uncompressed"></div>

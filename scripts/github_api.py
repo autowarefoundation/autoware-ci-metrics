@@ -24,6 +24,7 @@ class GitHubWorkflowAPI:
         created_after: Optional[datetime] = None,
         event: Optional[str] = None,
         branch: Optional[str] = None,
+        only_success: bool = True,
     ):
         payloads = {"per_page": 100, "status": "completed", "page": "1"}
         if created_after is not None:
@@ -63,7 +64,7 @@ class GitHubWorkflowAPI:
         workflow_runs = [
             run
             for run in workflow_runs
-            if run["conclusion"] == "success"
+            if (not only_success or run["conclusion"] == "success")
             and isinstance(run["created_at"], str)
             and isinstance(run["updated_at"], str)
         ]
@@ -75,16 +76,31 @@ class GitHubWorkflowAPI:
             run["updated_at"] = datetime.strptime(
                 run["updated_at"], self.time_format
             ).replace(tzinfo=timezone.utc)
+            # run_started_at is the start of the *latest attempt*. For rerun
+            # runs, created_at is the first attempt's queue time (possibly
+            # days earlier), so using it inflates wall-clock. Matches what
+            # GitHub's UI shows per-run.
+            started_raw = run.get("run_started_at")
+            if started_raw:
+                run["run_started_at"] = datetime.strptime(
+                    started_raw, self.time_format
+                ).replace(tzinfo=timezone.utc)
+            else:
+                run["run_started_at"] = run["created_at"]
+            head_commit = run.get("head_commit") or {}
+            message = head_commit.get("message") or ""
+            run["commit_title"] = message.splitlines()[0] if message else ""
 
         # Sorting by created_at (oldest to newest, utility function)
         workflow_runs = sorted(workflow_runs, key=lambda k: k["created_at"])
 
         # Extract duration from each workflow run
         if not accurate:
-            # By created_at and updated_at — wall-clock total. No per-job data.
+            # Wall-clock of the latest attempt (updated_at - run_started_at).
+            # No per-job data.
             for run in workflow_runs:
                 run["duration"] = (
-                    run["updated_at"] - run["created_at"]
+                    run["updated_at"] - run["run_started_at"]
                 ).total_seconds()
                 run["jobs"] = {}
 
