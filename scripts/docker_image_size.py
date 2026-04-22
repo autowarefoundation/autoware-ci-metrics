@@ -280,6 +280,15 @@ def main():
             "CI runners should pass this flag to free disk between distros."
         ),
     )
+    parser.add_argument(
+        "--tags",
+        default="",
+        help=(
+            "Comma-separated subset of canonical tags to measure (defaults to all "
+            "six). Used by the workflow's digest-check stage to skip unchanged "
+            "images."
+        ),
+    )
     args = parser.parse_args()
 
     print(f"Fetching Docker image sizes for {ORG}/{IMAGE}")
@@ -293,10 +302,20 @@ def main():
     output_dir = pathlib.Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    selected = {t.strip() for t in args.tags.split(",") if t.strip()}
+    if selected:
+        unknown = selected - set(TAGS)
+        if unknown:
+            print(f"Warning: ignoring unknown tags: {sorted(unknown)}")
+        print(f"Measuring filtered subset: {sorted(selected & set(TAGS))}")
+
     pull_image = f"{REGISTRY}/{ORG}/{IMAGE}"
     written = 0
     for group in TAG_GROUPS:
-        for tag in group:
+        group_to_measure = [t for t in group if not selected or t in selected]
+        if not group_to_measure:
+            continue
+        for tag in group_to_measure:
             print(f"Fetching size for tag: {tag}")
             size_info = get_image_size(token, tag)
             if "error" in size_info:
@@ -322,7 +341,7 @@ def main():
                 f.write(json.dumps(line) + "\n")
             written += 1
         if args.allow_pruning_images:
-            remove_docker_images(pull_image, group)
+            remove_docker_images(pull_image, group_to_measure)
         else:
             print(
                 "Skipping image pruning (pass --allow-pruning-images to enable; "

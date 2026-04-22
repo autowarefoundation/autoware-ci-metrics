@@ -7,7 +7,41 @@ on:
   workflow_dispatch:
 
 jobs:
-  docker_image_size:
+  check-digests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed-tags: ${{ steps.check.outputs.changed-tags }}
+      should-measure: ${{ steps.check.outputs.should-measure }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Checkout data branch
+        uses: actions/checkout@v6
+        with:
+          ref: data-storage
+          path: data-storage
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Check upstream digests
+        id: check
+        run: |
+          python scripts/check_image_digests.py \
+            --data-dir data-storage \
+            --github-token ${{ github.token }}
+
+  measure:
+    needs: check-digests
+    if: ${{ needs.check-digests.outputs.should-measure == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,17 +65,6 @@ jobs:
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-
-      - name: Ensure data-storage branch exists
-        run: |
-          if ! git ls-remote --exit-code --heads origin data-storage > /dev/null 2>&1; then
-            echo "Branch 'data-storage' does not exist. Creating it..."
-            git checkout --orphan data-storage
-            git reset --hard
-            git commit --allow-empty -m "Initialize data-storage branch"
-            git push origin data-storage
-            git checkout -
-          fi
 
       - name: Checkout data branch
         uses: actions/checkout@v6
@@ -73,6 +96,7 @@ jobs:
           python scripts/docker_image_size.py \
             --output-dir data-storage \
             --github-token ${{ github.token }} \
+            --tags "${{ needs.check-digests.outputs.changed-tags }}" \
             --allow-pruning-images
 
       - name: Disk space and image sizes after script
