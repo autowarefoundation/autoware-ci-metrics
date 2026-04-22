@@ -92,7 +92,11 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
   const series = jobNames.map(name => ({
     name,
     type: 'line',
-    showSymbol: false,
+    showSymbol: true,
+    symbol: 'circle',
+    symbolSize: 9,
+    lineStyle: { width: 4 },
+    emphasis: { focus: 'series', scale: 1.4 },
     data: slice
       .map(r => {
         const v = r.jobs && r.jobs[name];
@@ -130,22 +134,49 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
 function dockerSizeOption(title, perTag, sizeField, cutoff) {
   const now = Date.now();
   const series = Object.keys(perTag || {}).map(tag => {
-    const slice = withinWindow(perTag[tag] || [], cutoff);
-    const data = slice.map(d => ({
+    // Defensive sort — per-tag arrays come from appended JSONL so they're
+    // effectively chronological, but we rely on it for the cutoff split.
+    const all = (perTag[tag] || []).slice().sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    );
+    const inWindow = cutoff
+      ? all.filter(d => new Date(d.date) >= cutoff)
+      : all;
+    const data = inWindow.map(d => ({
       value: [new Date(d.date).getTime(), d[sizeField] / 1e9],
       digest: d.digest,
     }));
-    // Extend each tag's line to the current datetime with a flat segment so
-    // the right edge of the chart reflects the latest known size — even if
-    // the image hasn't been remeasured recently. `symbol: 'none'` keeps this
-    // extrapolated endpoint from looking like a real measurement.
+    // Leading anchor at the cutoff boundary carrying the last pre-cutoff
+    // value. Ensures every tag has a visible line across the whole time
+    // window even when no measurement falls inside it (e.g. 1d view of a
+    // stable image) — otherwise the series becomes empty and vanishes.
+    if (cutoff) {
+      let beforeCutoff = null;
+      for (const d of all) {
+        if (new Date(d.date) < cutoff) beforeCutoff = d;
+        else break;
+      }
+      if (beforeCutoff) {
+        data.unshift({
+          value: [cutoff.getTime(), beforeCutoff[sizeField] / 1e9],
+          digest: beforeCutoff.digest,
+          // emptyCircle distinguishes a synthetic anchor from a real
+          // measurement while still being hoverable for the tooltip.
+          symbol: 'emptyCircle',
+        });
+      }
+    }
+    // Trailing anchor: extend to now with a flat segment so the right edge
+    // reflects the latest known size even if the image hasn't been
+    // remeasured recently. `symbol: 'none'` keeps both synthetic endpoints
+    // from looking like real measurements.
     if (data.length) {
       const last = data[data.length - 1];
       if (last.value[0] < now) {
         data.push({
           value: [now, last.value[1]],
           digest: last.digest,
-          symbol: 'none',
+          symbol: 'emptyCircle',
         });
       }
     }
@@ -155,8 +186,22 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
       showSymbol: true,
       symbol: 'circle',
       symbolSize: 9,
-      lineStyle: { width: 3 },
+      lineStyle: { width: 4 },
       emphasis: { focus: 'series', scale: 1.4 },
+      label: {
+        show: true,
+        position: 'top',
+        fontSize: 10,
+        color: '#444',
+        formatter: p => `${p.value[1].toFixed(2)}GB`,
+      },
+      // Shift colliding labels vertically first; hide whatever still
+      // overlaps. ECharts recomputes after each zoom, so density drops
+      // reveal more labels naturally.
+      labelLayout: {
+        moveOverlap: 'shiftY',
+        hideOverlap: true,
+      },
       data,
     };
   });
