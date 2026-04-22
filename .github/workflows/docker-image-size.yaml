@@ -81,12 +81,10 @@ jobs:
           docker image ls
           docker version
 
-      - name: Check and commit results
+      - name: Commit and push new docker image data
         run: |
           cd data-storage
-          python ../scripts/check_new_data.py . --commit
-
-      - name: Push changes
-        run: |
-          cd data-storage
-          git push origin data-storage || echo "No changes to push"
+          python ../scripts/check_new_data.py . --commit \
+            --message "chore(data): append new docker image size measurements"
+          git pull --rebase origin data-storage
+          git push origin data-storage

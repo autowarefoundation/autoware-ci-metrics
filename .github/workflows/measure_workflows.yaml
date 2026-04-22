@@ -57,6 +57,14 @@ jobs:
             --data-dir data-storage
           cp github_action_data.json public/
 
+      - name: Commit and push new workflow data
+        run: |
+          cd data-storage
+          python ../scripts/check_new_data.py . --commit \
+            --message "chore(data): append new workflow run measurements"
+          git pull --rebase origin data-storage
+          git push origin data-storage
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:

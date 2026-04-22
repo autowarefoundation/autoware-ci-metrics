@@ -3,7 +3,6 @@
 
 import argparse
 import sys
-from datetime import datetime, timezone
 from subprocess import PIPE, run
 
 
@@ -59,8 +58,7 @@ def git_commit_data(data_dir: str, commit_message: str = "") -> bool:
         run(["git", "add", data_dir], check=True)
 
         if not commit_message:
-            timestamp = datetime.now(timezone.utc).isoformat()
-            commit_message = f"Update data files - {timestamp}"
+            commit_message = "chore(data): update data files"
 
         run(["git", "commit", "-m", commit_message], check=True)
 
@@ -87,23 +85,17 @@ def main():
     parser.add_argument(
         "--message",
         default="",
-        help="Custom commit message (default: auto-generated with timestamp)",
+        help='Commit message (default: "chore(data): update data files")',
     )
     args = parser.parse_args()
 
     if has_new_data_files(args.data_dir):
         print(f"New data files detected in {args.data_dir}")
-
-        if args.commit:
-            if git_commit_data(args.data_dir, args.message):
-                sys.exit(0)
-            else:
-                sys.exit(1)
-        else:
-            sys.exit(0)
+        if args.commit and not git_commit_data(args.data_dir, args.message):
+            sys.exit(1)
     else:
         print(f"No new data files in {args.data_dir}")
-        sys.exit(1)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
