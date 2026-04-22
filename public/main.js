@@ -168,8 +168,10 @@ function themeColors() {
   };
 }
 
-function workflowLineOption(title, runs, jobNames, cutoff) {
+function workflowLineOption(title, runs, jobNames, cutoff, labelMap) {
   const slice = withinWindow(runs || [], cutoff);
+  const labels = labelMap || {};
+  const labelFor = key => labels[key] || key;
 
   // Success runs drive the line series. Runs without a conclusion (legacy
   // data and per-job workflows like health-check) are treated as success
@@ -182,7 +184,7 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
   );
 
   const lineSeries = jobNames.map(name => ({
-    name,
+    name: labelFor(name),
     type: 'line',
     showSymbol: true,
     symbol: 'circle',
@@ -658,7 +660,8 @@ function renderAll() {
   );
   charts.dockerBuild.setOption(
     workflowLineOption('Build duration',
-      rawData.workflow_time['docker-build-and-push'], DOCKER_BUILD_JOBS, cutoff),
+      rawData.workflow_time['docker-build-and-push'], DOCKER_BUILD_JOBS, cutoff,
+      { total: 'successful runs' }),
     true
   );
   charts.dockerCompressed.setOption(
