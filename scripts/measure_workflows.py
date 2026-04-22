@@ -11,8 +11,6 @@ print = functools.partial(print, flush=True)
 import github_api
 
 REPO = "autowarefoundation/autoware"
-HEALTH_CHECK_WORKFLOW_ID = "health-check.yaml"
-DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = "docker-build-and-push.yaml"
 
 CANONICAL_TAGS = [
     "core-dependencies-humble",
@@ -28,9 +26,30 @@ BACKFILL_DAYS = 90
 # Overlap re-fetched on each incremental run, in case late-completing runs
 # slipped in just under the previous cursor.
 CURSOR_OVERLAP = timedelta(days=1)
-# Drop runs outside this band — they're bogus (cancelled-fast or hung).
-MIN_RUN_SECONDS = 60 * 3
-MAX_RUN_SECONDS = 3600 * 10
+
+# Per-workflow collection config. `accurate=True` triggers a jobs-API call
+# per run (needed to get per-job durations); `accurate=False` is wall-clock
+# only (created_at..updated_at) and skips the jobs API.
+WORKFLOWS = {
+    "health-check": {
+        "id": "health-check.yaml",
+        "accurate": True,
+        "event": None,
+        "branch": None,
+        # 3 min .. 10 h — drops cancelled-early and hung runs.
+        "min_seconds": 60 * 3,
+        "max_seconds": 3600 * 10,
+    },
+    "docker-build-and-push": {
+        "id": "docker-build-and-push.yaml",
+        "accurate": False,
+        "event": "push",
+        "branch": "main",
+        # > 20 min — anything shorter is a no-op skip via changed-files gate.
+        "min_seconds": 60 * 20,
+        "max_seconds": 3600 * 10,
+    },
+}
 
 
 def workflow_basename(workflow_id: str) -> str:
@@ -107,9 +126,11 @@ def append_workflow_runs(
 
 
 def collect_workflow_runs(
-    workflow_id: str, data_dir: pathlib.Path, github_token: str
+    workflow_key: str, data_dir: pathlib.Path, github_token: str
 ) -> list[dict]:
     """Incrementally fetch + persist runs for a workflow; return all known runs."""
+    spec = WORKFLOWS[workflow_key]
+    workflow_id = spec["id"]
     print(f"workflow: {workflow_id}")
     existing_ids, max_dt, existing_entries = load_existing_workflow_runs(
         data_dir, workflow_id
@@ -126,12 +147,19 @@ def collect_workflow_runs(
 
     api = github_api.GitHubWorkflowAPI(github_token)
     fetched = api.get_workflow_duration_list(
-        REPO, workflow_id, accurate=True, created_after=cursor
+        REPO,
+        workflow_id,
+        accurate=spec["accurate"],
+        created_after=cursor,
+        event=spec["event"],
+        branch=spec["branch"],
     )
     print(f"  fetched {len(fetched)} runs from API")
 
     in_band = [
-        r for r in fetched if MIN_RUN_SECONDS < r["duration"] < MAX_RUN_SECONDS
+        r
+        for r in fetched
+        if spec["min_seconds"] < r["duration"] < spec["max_seconds"]
     ]
     new_runs = [r for r in in_band if r["id"] not in existing_ids]
     print(f"  in-band: {len(in_band)}; new (deduped): {len(new_runs)}")
@@ -210,33 +238,18 @@ def export_to_json(health_check, docker_build_and_push, docker_images):
         return out
 
     def _export_docker_build_and_push(workflow):
-        out = []
-        for run in workflow:
-            jobs = {}
-            for job in run["jobs"]:
-                if "docker-build-and-push (amd64)" in job:
-                    jobs["main-amd64"] = run["jobs"][job]
-                elif "docker-build-and-push (arm64)" in job:
-                    jobs["main-arm64"] = run["jobs"][job]
-                elif "docker-build-and-push-cuda (amd64)" in job:
-                    jobs["cuda-amd64"] = run["jobs"][job]
-                elif "docker-build-and-push-cuda (arm64)" in job:
-                    jobs["cuda-arm64"] = run["jobs"][job]
-                elif "docker-build-and-push-tools (amd64)" in job:
-                    jobs["tools-amd64"] = run["jobs"][job]
-                elif "docker-build-and-push-tools (arm64)" in job:
-                    jobs["tools-arm64"] = run["jobs"][job]
-            if not jobs:
-                continue
-            out.append(
-                {
-                    "run_id": run["id"],
-                    "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
-                    "duration": run["duration"] / 3600,
-                    "jobs": jobs,
-                }
-            )
-        return out
+        # Single wall-clock duration per run — push-to-main only, > 20 min
+        # filtering is done at fetch time. Surface it as a one-key "jobs" dict
+        # so the dashboard's workflowSeries() can treat both charts uniformly.
+        return [
+            {
+                "run_id": run["id"],
+                "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
+                "duration": run["duration"] / 3600,
+                "jobs": {"total": run["duration"]},
+            }
+            for run in workflow
+        ]
 
     return {
         "workflow_time": {
@@ -267,10 +280,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     health_check = collect_workflow_runs(
-        HEALTH_CHECK_WORKFLOW_ID, args.data_dir, args.github_token
+        "health-check", args.data_dir, args.github_token
     )
     docker_build_and_push = collect_workflow_runs(
-        DOCKER_BUILD_AND_PUSH_WORKFLOW_ID, args.data_dir, args.github_token
+        "docker-build-and-push", args.data_dir, args.github_token
     )
 
     print(f"Loading docker image history from {args.data_dir}")

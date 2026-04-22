@@ -16,11 +16,8 @@ const DOCKER_TAGS = [
 ];
 
 const HEALTH_CHECK_JOBS = ['main-amd64', 'main-arm64', 'nightly-amd64'];
-const DOCKER_BUILD_JOBS = [
-  'main-amd64', 'main-arm64',
-  'cuda-amd64', 'cuda-arm64',
-  'tools-amd64', 'tools-arm64',
-];
+// docker-build-and-push tracks one wall-clock total per push-to-main run.
+const DOCKER_BUILD_JOBS = ['total'];
 
 let rawData = null;
 let charts = {};

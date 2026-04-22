@@ -22,12 +22,18 @@ class GitHubWorkflowAPI:
         workflow_id: str,
         accurate=False,
         created_after: Optional[datetime] = None,
+        event: Optional[str] = None,
+        branch: Optional[str] = None,
     ):
         payloads = {"per_page": 100, "status": "completed", "page": "1"}
         if created_after is not None:
             # GitHub accepts "?created=>=YYYY-MM-DDTHH:MM:SSZ" as a server-side
             # filter — slashes the result set so we only page through new runs.
             payloads["created"] = ">=" + created_after.strftime(self.time_format)
+        if event is not None:
+            payloads["event"] = event
+        if branch is not None:
+            payloads["branch"] = branch
         endpoint = (
             f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
         )
@@ -75,11 +81,12 @@ class GitHubWorkflowAPI:
 
         # Extract duration from each workflow run
         if not accurate:
-            # By created_at and updated_at
+            # By created_at and updated_at — wall-clock total. No per-job data.
             for run in workflow_runs:
                 run["duration"] = (
                     run["updated_at"] - run["created_at"]
                 ).total_seconds()
+                run["jobs"] = {}
 
             return workflow_runs
 
