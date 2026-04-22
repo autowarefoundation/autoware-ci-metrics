@@ -37,10 +37,10 @@ WORKFLOWS = {
         "accurate": False,
         "event": "push",
         "branch": "main",
-        # min_seconds only applies to success runs (filters out the no-op
-        # changed-files fast path); non-success runs of any duration are
-        # kept so the dashboard can colour them.
-        "min_seconds": 60 * 20,
+        # No min_seconds — the changed-files fast-path (<20 min successes)
+        # is real workflow activity worth surfacing. max_seconds stays as
+        # a sanity cap against hung runs.
+        "min_seconds": 0,
         "max_seconds": 3600 * 10,
         "only_success": False,
     },
