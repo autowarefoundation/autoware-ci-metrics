@@ -12,16 +12,50 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <style>
+      :root {
+        --bg: #f7f8fa;
+        --text: #212529;
+        --text-muted: #6b7280;
+        --text-faint: #9ca3af;
+        --card-bg: #ffffff;
+        --card-border: #e5e7eb;
+        --card-border-soft: #f3f4f6;
+        --row-hover: #f9fafb;
+        --error-bg: #fef2f2;
+        --error-border: #fecaca;
+        --error-text: #991b1b;
+        --stale: #b45309;
+        --spinner-track: #e5e7eb;
+        --spinner-head: #6b7280;
+        --link: inherit;
+      }
+      [data-theme='dark'] {
+        --bg: #0b1220;
+        --text: #e5e7eb;
+        --text-muted: #94a3b8;
+        --text-faint: #64748b;
+        --card-bg: #131b2c;
+        --card-border: #1f2a44;
+        --card-border-soft: #1a2236;
+        --row-hover: #1a2236;
+        --error-bg: #3d0f14;
+        --error-border: #7a1a24;
+        --error-text: #fca5a5;
+        --stale: #fbbf24;
+        --spinner-track: #1f2a44;
+        --spinner-head: #94a3b8;
+        --link: #93c5fd;
+      }
       body {
-        background: #f7f8fa;
-        color: #212529;
+        background: var(--bg);
+        color: var(--text);
       }
       .dashboard-header {
         position: sticky;
         top: 0;
         z-index: 1020;
-        background: #ffffff;
-        border-bottom: 1px solid #e5e7eb;
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--card-border);
         padding: 0.6rem 0;
       }
       .dashboard-header .title {
@@ -32,31 +66,31 @@
       }
       .dashboard-header .subtitle {
         font-size: 0.8rem;
-        color: #6b7280;
+        color: var(--text-muted);
         line-height: 1.2;
       }
       .last-updated {
         margin-left: 0.5rem;
-        color: #9ca3af;
+        color: var(--text-faint);
       }
-      .last-updated.stale { color: #b45309; font-weight: 500; }
+      .last-updated.stale { color: var(--stale); font-weight: 500; }
       .dashboard-status {
         padding: 1.25rem;
         text-align: center;
-        color: #6b7280;
+        color: var(--text-muted);
       }
       .dashboard-status.error {
-        color: #991b1b;
-        background: #fef2f2;
-        border: 1px solid #fecaca;
+        color: var(--error-text);
+        background: var(--error-bg);
+        border: 1px solid var(--error-border);
         border-radius: 0.5rem;
       }
       .dashboard-loading-spinner {
         display: inline-block;
         width: 1rem;
         height: 1rem;
-        border: 2px solid #e5e7eb;
-        border-top-color: #6b7280;
+        border: 2px solid var(--spinner-track);
+        border-top-color: var(--spinner-head);
         border-radius: 50%;
         animation: dashboard-spin 0.8s linear infinite;
         margin-right: 0.5rem;
@@ -68,20 +102,20 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: #6b7280;
+        color: var(--text-muted);
         margin: 2rem 0 0.5rem;
       }
       .section-label:first-of-type { margin-top: 1rem; }
       .chart-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
         border-radius: 0.5rem;
         box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
         margin-bottom: 1rem;
       }
       .chart-card > header {
         padding: 0.75rem 1.1rem 0.5rem;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid var(--card-border-soft);
       }
       .chart-card > header h2 {
         font-size: 1rem;
@@ -90,16 +124,27 @@
       }
       .chart-card > header .subtitle {
         font-size: 0.8rem;
-        color: #6b7280;
+        color: var(--text-muted);
         margin-top: 0.1rem;
       }
       .chart-card .chart-body {
         padding: 0.5rem 0.5rem 0.25rem;
       }
+      .workflow-link {
+        color: var(--link);
+        text-decoration: none;
+        border-bottom: 1px dashed transparent;
+      }
+      .workflow-link:hover {
+        border-bottom-color: var(--text-muted);
+        color: var(--link);
+      }
+      [data-theme='light'] .workflow-link { color: inherit; }
       #repo-swimlane-chart { width: 100%; height: 380px; }
       .chart-line { width: 100%; height: 460px; }
       .image-size-table {
         font-size: 0.85rem;
+        color: var(--text);
       }
       .image-size-table table {
         width: 100%;
@@ -111,13 +156,13 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        color: #6b7280;
+        color: var(--text-muted);
         padding: 0.35rem 0.5rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--card-border);
       }
       .image-size-table td {
         padding: 0.35rem 0.5rem;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid var(--card-border-soft);
       }
       .image-size-table tbody tr:last-child td {
         border-bottom: none;
@@ -135,7 +180,7 @@
         font-variant-numeric: tabular-nums;
       }
       .image-size-table tr.run-row { cursor: pointer; }
-      .image-size-table tr.run-row:hover td { background: #f9fafb; }
+      .image-size-table tr.run-row:hover td { background: var(--row-hover); }
       .image-size-table .status-cell {
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
@@ -143,8 +188,27 @@
       .image-size-table .status-cell .conclusion-icon {
         margin-right: 0.25rem;
       }
-      .image-size-table .muted { color: #9ca3af; font-style: italic; }
+      .image-size-table .muted {
+        color: var(--text-faint);
+        font-style: italic;
+      }
     </style>
+    <script>
+      // Apply stored theme before paint so there's no flash of light-mode
+      // on dark-preference loads. Mirrors the default in main.js.
+      (function () {
+        try {
+          var t = localStorage.getItem('dashboard-theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <header class="dashboard-header">
@@ -164,6 +228,13 @@
           <button type="button" class="btn btn-outline-primary" data-duration="1y">1y</button>
           <button type="button" class="btn btn-outline-primary" data-duration="all">All</button>
         </div>
+        <button
+          id="theme-toggle"
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          aria-label="Toggle dark mode"
+          title="Toggle dark mode"
+        ></button>
         <a
           class="btn btn-sm btn-outline-secondary"
           href="https://github.com/autowarefoundation/autoware-ci-metrics"
@@ -203,10 +274,14 @@
 
       <section class="chart-card">
         <header>
-          <h2>docker-build-and-push execution times</h2>
+          <h2>
+            <a class="workflow-link"
+               href="https://github.com/autowarefoundation/autoware/blob/main/.github/workflows/docker-build-and-push.yaml"
+               target="_blank" rel="noopener">docker-build-and-push</a>
+            execution times
+          </h2>
           <div class="subtitle">
-            Wall-clock duration on push-to-main, filtered to &gt; 20 min to
-            drop no-op fast paths. Upstream
+            Wall-clock duration on push-to-main. Upstream
             <code>autowarefoundation/autoware</code>.
           </div>
         </header>
@@ -217,7 +292,12 @@
 
       <section class="chart-card">
         <header>
-          <h2>health-check execution times</h2>
+          <h2>
+            <a class="workflow-link"
+               href="https://github.com/autowarefoundation/autoware/blob/main/.github/workflows/health-check.yaml"
+               target="_blank" rel="noopener">health-check</a>
+            execution times
+          </h2>
           <div class="subtitle">
             Per-job durations of the nightly health-check workflow.
             Upstream <code>autowarefoundation/autoware</code>.

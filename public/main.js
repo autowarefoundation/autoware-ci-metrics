@@ -123,6 +123,51 @@ function insideZoom() {
   return [{ type: 'inside', xAxisIndex: 0, filterMode: 'none' }];
 }
 
+// Shared toolbox: reset-zoom and save-as-PNG in every chart's top-right
+// corner. Restore wipes the current pan+zoom+legend-toggle state back to
+// the initial render.
+function chartToolbox() {
+  return {
+    right: 10,
+    top: 0,
+    itemSize: 14,
+    feature: {
+      restore: { title: 'Reset zoom / toggles' },
+      saveAsImage: { title: 'Save as PNG', pixelRatio: 2 },
+    },
+  };
+}
+
+// Centered text graphic used when a chart has no data for the current
+// window. Caller decides when to apply it.
+function emptyStateGraphic(message) {
+  return [{
+    type: 'text',
+    left: 'center',
+    top: 'middle',
+    style: {
+      text: message,
+      fontSize: 13,
+      fill: themeColors().textMuted,
+      textAlign: 'center',
+    },
+  }];
+}
+
+function themeState() {
+  return document.documentElement.getAttribute('data-theme') === 'dark'
+    ? 'dark' : 'light';
+}
+
+function themeColors() {
+  const dark = themeState() === 'dark';
+  return {
+    cardBg: dark ? '#131b2c' : '#ffffff',
+    textMuted: dark ? '#94a3b8' : '#9ca3af',
+    text: dark ? '#e5e7eb' : '#444444',
+  };
+}
+
 function workflowLineOption(title, runs, jobNames, cutoff) {
   const slice = withinWindow(runs || [], cutoff);
 
@@ -194,7 +239,7 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
     symbolSize: 12,
     itemStyle: {
       color: conclusionStyle(k).color,
-      borderColor: '#fff',
+      borderColor: themeColors().cardBg,
       borderWidth: 1,
     },
     emphasis: { scale: 1.2 },
@@ -203,10 +248,12 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
   }));
 
   const series = [...lineSeries, ...scatterSeries];
-  return {
+  const isEmpty = !successRuns.length && !nonSuccessRuns.length;
+  const option = {
     title: { text: title, left: 'left' },
     grid: { left: 60, right: 30, top: 70, bottom: 50 },
     legend: { top: 30 },
+    toolbox: chartToolbox(),
     xAxis: { type: 'time' },
     yAxis: {
       type: 'value', min: 0,
@@ -227,6 +274,10 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
     },
     series,
   };
+  if (isEmpty) {
+    option.graphic = { elements: emptyStateGraphic('No runs in this window') };
+  }
+  return option;
 }
 
 function dockerSizeOption(title, perTag, sizeField, cutoff) {
@@ -312,7 +363,7 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
       data,
     };
   });
-  return {
+  const option = {
     color: DOCKER_PALETTE,
     // These charts are rebuilt from scratch on distro/time-range changes
     // (setOption with notMerge). The default 1s create-animation felt
@@ -321,6 +372,7 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
     title: { text: title, left: 'left' },
     grid: { left: 70, right: 30, top: 70, bottom: 50 },
     legend: { top: 30, type: 'scroll' },
+    toolbox: chartToolbox(),
     xAxis: { type: 'time' },
     yAxis: {
       type: 'value', min: 0,
@@ -342,6 +394,13 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
     },
     series,
   };
+  if (!visibleTagEntries.length) {
+    option.graphic = {
+      elements: emptyStateGraphic(
+        allTags.length ? 'No images for this distro' : 'No image data'),
+    };
+  }
+  return option;
 }
 
 function repoSwimlaneOption(cutoff) {
@@ -378,10 +437,13 @@ function repoSwimlaneOption(cutoff) {
   );
 
   const legendNames = conclusionKeys.map(k => conclusionStyle(k).label);
+  const totalBubbles = conclusionKeys.reduce(
+    (n, k) => n + (buckets[k] || []).length, 0);
 
-  return {
+  const option = {
     grid: { left: 160, right: 30, top: 50, bottom: 70 },
     legend: { top: 10, data: legendNames },
+    toolbox: chartToolbox(),
     xAxis: {
       type: 'time',
       // yAxis range includes 0, so without this the x-axis line would be
@@ -479,7 +541,7 @@ function repoSwimlaneOption(cutoff) {
         },
         itemStyle: {
           color: conclusionStyle(k).color,
-          borderColor: '#fff',
+          borderColor: themeColors().cardBg,
           borderWidth: 1,
           opacity: 0.85,
         },
@@ -488,6 +550,10 @@ function repoSwimlaneOption(cutoff) {
       })),
     ],
   };
+  if (!totalBubbles) {
+    option.graphic = { elements: emptyStateGraphic('No runs in this window') };
+  }
+  return option;
 }
 
 function formatGb(bytes) {
@@ -677,6 +743,66 @@ function renderLastUpdated(iso) {
   el.classList.toggle('stale', ms > 24 * 3600 * 1000);
 }
 
+const THEME_STORAGE_KEY = 'dashboard-theme';
+
+function createAllCharts() {
+  // ECharts' built-in 'dark' theme handles axis/label/tooltip styling;
+  // our custom series colours in CONCLUSION_STYLE / DOCKER_PALETTE
+  // still come through unchanged on either theme.
+  const theme = themeState() === 'dark' ? 'dark' : undefined;
+  charts.repoSwimlane = echarts.init(
+    document.querySelector('#repo-swimlane-chart'), theme);
+  charts.healthCheck = echarts.init(
+    document.querySelector('#health-check-time-chart'), theme);
+  charts.dockerBuild = echarts.init(
+    document.querySelector('#docker-build-and-push-time-chart'), theme);
+  charts.dockerCompressed = echarts.init(
+    document.querySelector('#docker-chart-compressed'), theme);
+  charts.dockerUncompressed = echarts.init(
+    document.querySelector('#docker-chart-uncompressed'), theme);
+
+  const openRunUrlOnClick = params => {
+    const meta = params.data && params.data.runMeta;
+    if (meta && meta.html_url) {
+      window.open(meta.html_url, '_blank', 'noopener');
+    }
+  };
+  charts.repoSwimlane.on('click', openRunUrlOnClick);
+  charts.dockerBuild.on('click', openRunUrlOnClick);
+}
+
+function updateThemeToggleLabel() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  btn.textContent = themeState() === 'dark' ? '☀ light' : '☾ dark';
+}
+
+function applyTheme(t, { reinitCharts = true } = {}) {
+  document.documentElement.setAttribute('data-theme', t);
+  updateThemeToggleLabel();
+  if (reinitCharts && Object.keys(charts).length) {
+    // ECharts can't change theme on an initialised instance — dispose
+    // and recreate each chart, then re-run the full render pipeline so
+    // everything (including option builders that read themeColors())
+    // refreshes.
+    Object.values(charts).forEach(c => c.dispose());
+    charts = {};
+    createAllCharts();
+    renderAll();
+  }
+}
+
+function wireThemeToggle() {
+  updateThemeToggleLabel();
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const next = themeState() === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch (e) {}
+    applyTheme(next);
+  });
+}
+
 fetch('github_action_data.json')
   .then(res => {
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
@@ -687,24 +813,12 @@ fetch('github_action_data.json')
     setDashboardStatus(null);
     renderLastUpdated(json.generated_at);
 
-    charts.repoSwimlane = echarts.init(document.querySelector('#repo-swimlane-chart'));
-    charts.healthCheck = echarts.init(document.querySelector('#health-check-time-chart'));
-    charts.dockerBuild = echarts.init(document.querySelector('#docker-build-and-push-time-chart'));
-    charts.dockerCompressed = echarts.init(document.querySelector('#docker-chart-compressed'));
-    charts.dockerUncompressed = echarts.init(document.querySelector('#docker-chart-uncompressed'));
-
-    const openRunUrlOnClick = params => {
-      const meta = params.data && params.data.runMeta;
-      if (meta && meta.html_url) {
-        window.open(meta.html_url, '_blank', 'noopener');
-      }
-    };
-    charts.repoSwimlane.on('click', openRunUrlOnClick);
-    charts.dockerBuild.on('click', openRunUrlOnClick);
+    createAllCharts();
 
     renderAll();
     wireDurationButtons();
     wireDistroButtons();
+    wireThemeToggle();
     // Normalise the URL (strip unknown params, canonicalise values) once
     // the hydrated state is actually applied.
     writeStateToUrl();
