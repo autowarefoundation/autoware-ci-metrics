@@ -478,7 +478,13 @@ function repoSwimlaneOption(cutoff) {
     dataZoom: insideZoom(),
     tooltip: {
       trigger: 'item',
-      extraCssText: 'max-width: 380px;',
+      // ECharts tooltip defaults to white-space:nowrap, so long commit
+      // titles push past the max-width. These rules let the content wrap
+      // inside the container, with long unbreakable tokens (SHAs) wrapped
+      // via overflow-wrap.
+      extraCssText:
+        'max-width: 380px; white-space: normal; overflow-wrap: anywhere;' +
+        ' line-height: 1.35;',
       formatter: p => {
         const m = p.data && p.data.runMeta;
         if (!m) return '';
