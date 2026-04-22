@@ -271,6 +271,15 @@ def main():
         default="",
         help="GitHub token for authentication (falls back to GITHUB_TOKEN env var)",
     )
+    parser.add_argument(
+        "--allow-pruning-images",
+        action="store_true",
+        help=(
+            "Allow the script to remove pulled images and run `docker system prune` "
+            "between tag groups. Off by default to protect local Docker state; "
+            "CI runners should pass this flag to free disk between distros."
+        ),
+    )
     args = parser.parse_args()
 
     print(f"Fetching Docker image sizes for {ORG}/{IMAGE}")
@@ -309,7 +318,13 @@ def main():
                 )
             else:
                 print(f"  {tag}: Error - {size_info['error']}")
-        remove_docker_images(pull_image, group)
+        if args.allow_pruning_images:
+            remove_docker_images(pull_image, group)
+        else:
+            print(
+                "Skipping image pruning (pass --allow-pruning-images to enable; "
+                "off by default to protect local Docker state)."
+            )
 
     # Save results with timestamp
     output_dir = pathlib.Path(args.output_dir)

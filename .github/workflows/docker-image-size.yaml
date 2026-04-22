@@ -72,7 +72,8 @@ jobs:
         run: |
           python scripts/docker_image_size.py \
             --output-dir data-storage \
-            --github-token ${{ github.token }}
+            --github-token ${{ github.token }} \
+            --allow-pruning-images
 
       - name: Disk space and image sizes after script
         run: |
