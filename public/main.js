@@ -10,6 +10,13 @@ const DURATION_DAYS = {
 const HEALTH_CHECK_JOBS = ['main-amd64', 'main-arm64', 'nightly-amd64'];
 const DOCKER_BUILD_JOBS = ['total'];
 
+// ECharts' default palette pinned so the docker chart series colors and
+// the latest-size table's swatches stay in sync by index.
+const DOCKER_PALETTE = [
+  '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
+  '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc',
+];
+
 // Lane order (top → bottom) for the swimlane chart. Keys must match the
 // short-names emitted by scripts/measure_workflows.py::repo_short_name.
 const REPOS = ['autoware_core', 'autoware_universe', 'autoware_tools'];
@@ -39,6 +46,11 @@ const SWIMLANE_JITTER = 0.32;
 let rawData = null;
 let charts = {};
 let currentDuration = '7d';
+let currentDistro = 'jazzy';
+
+function tagMatchesDistro(tag) {
+  return currentDistro === 'all' || tag.endsWith(`-${currentDistro}`);
+}
 
 function cutoffDate(durationKey) {
   const days = DURATION_DAYS[durationKey];
@@ -133,7 +145,14 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
 
 function dockerSizeOption(title, perTag, sizeField, cutoff) {
   const now = Date.now();
-  const series = Object.keys(perTag || {}).map(tag => {
+  // The palette is indexed by the *original* tag position so swatches in
+  // the sidebar table match chart colors regardless of which distro is
+  // active. Filter tags but remember each one's original index.
+  const allTags = Object.keys(perTag || {});
+  const visibleTagEntries = allTags
+    .map((tag, i) => ({ tag, paletteIndex: i }))
+    .filter(({ tag }) => tagMatchesDistro(tag));
+  const series = visibleTagEntries.map(({ tag, paletteIndex }) => {
     // Defensive sort — per-tag arrays come from appended JSONL so they're
     // effectively chronological, but we rely on it for the cutoff split.
     const all = (perTag[tag] || []).slice().sort(
@@ -180,13 +199,15 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
         });
       }
     }
+    const color = DOCKER_PALETTE[paletteIndex % DOCKER_PALETTE.length];
     return {
       name: tag,
       type: 'line',
       showSymbol: true,
       symbol: 'circle',
       symbolSize: 9,
-      lineStyle: { width: 4 },
+      itemStyle: { color },
+      lineStyle: { width: 4, color },
       emphasis: { focus: 'series', scale: 1.4 },
       label: {
         show: true,
@@ -206,6 +227,11 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
     };
   });
   return {
+    color: DOCKER_PALETTE,
+    // These charts are rebuilt from scratch on distro/time-range changes
+    // (setOption with notMerge). The default 1s create-animation felt
+    // sluggish; snappy updates without animation read better here.
+    animation: false,
     title: { text: title, left: 'left' },
     grid: { left: 70, right: 30, top: 70, bottom: 50 },
     legend: { top: 30, type: 'scroll' },
@@ -378,6 +404,41 @@ function repoSwimlaneOption(cutoff) {
   };
 }
 
+function formatGb(bytes) {
+  return `${(bytes / 1e9).toFixed(2)} GB`;
+}
+
+function renderImageSizeTable(containerId, sizeField) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const allTags = Object.keys(rawData.docker_images || {});
+  // Preserve the palette index from the unfiltered tag list so the
+  // sidebar swatches match the chart line colors even when the distro
+  // toggle hides rows.
+  const rows = allTags
+    .map((tag, i) => ({ tag, paletteIndex: i }))
+    .filter(({ tag }) => tagMatchesDistro(tag))
+    .map(({ tag, paletteIndex }) => {
+      const entries = rawData.docker_images[tag] || [];
+      if (!entries.length) return '';
+      const latest = entries[entries.length - 1];
+      const color = DOCKER_PALETTE[paletteIndex % DOCKER_PALETTE.length];
+      return `
+        <tr>
+          <td><span class="swatch" style="background:${color}"></span>${escapeHtml(tag)}</td>
+          <td class="size-cell">${escapeHtml(formatGb(latest[sizeField] || 0))}</td>
+        </tr>`;
+    })
+    .join('');
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Image</th><th class="size-cell">Latest</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 function renderAll() {
   const cutoff = cutoffDate(currentDuration);
   charts.repoSwimlane.setOption(repoSwimlaneOption(cutoff), true);
@@ -401,6 +462,8 @@ function renderAll() {
       rawData.docker_images, 'size_uncompressed', cutoff),
     true
   );
+  renderImageSizeTable('docker-table-uncompressed', 'size_uncompressed');
+  renderImageSizeTable('docker-table-compressed', 'size_compressed');
 }
 
 function wireDurationButtons() {
@@ -409,6 +472,20 @@ function wireDurationButtons() {
       currentDuration = btn.dataset.duration;
       document.querySelectorAll('[data-duration]').forEach(b =>
         b.classList.toggle('active', b === btn));
+      renderAll();
+    });
+  });
+}
+
+function wireDistroButtons() {
+  document.querySelectorAll('[data-distro]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentDistro = btn.dataset.distro;
+      // Sync by value rather than element identity so a click on one
+      // card's toggle also highlights the matching button on the other
+      // card.
+      document.querySelectorAll('[data-distro]').forEach(b =>
+        b.classList.toggle('active', b.dataset.distro === currentDistro));
       renderAll();
     });
   });
@@ -434,6 +511,7 @@ fetch('github_action_data.json')
 
     renderAll();
     wireDurationButtons();
+    wireDistroButtons();
 
     window.addEventListener('resize', () => {
       Object.values(charts).forEach(c => c.resize());

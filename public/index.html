@@ -1,66 +1,237 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Autoware CI Metrics</title>
-    <link
-      href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"
-      rel="stylesheet"
-    />
-    <script
-      type="text/javascript"
-      src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"
-    ></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-    <style>
-      #repo-swimlane-chart { width: 100%; height: 380px; }
-      #health-check-time-chart,
-      #docker-build-and-push-time-chart,
-      #docker-chart-compressed,
-      #docker-chart-uncompressed { width: 100%; height: 500px; }
-    </style>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
       integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
       crossorigin="anonymous"
     />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <style>
+      body {
+        background: #f7f8fa;
+        color: #212529;
+      }
+      .dashboard-header {
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 0.6rem 0;
+      }
+      .dashboard-header .title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.2;
+      }
+      .dashboard-header .subtitle {
+        font-size: 0.8rem;
+        color: #6b7280;
+        line-height: 1.2;
+      }
+      .section-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+        margin: 2rem 0 0.5rem;
+      }
+      .section-label:first-of-type { margin-top: 1rem; }
+      .chart-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+        margin-bottom: 1rem;
+      }
+      .chart-card > header {
+        padding: 0.75rem 1.1rem 0.5rem;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      .chart-card > header h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+      }
+      .chart-card > header .subtitle {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 0.1rem;
+      }
+      .chart-card .chart-body {
+        padding: 0.5rem 0.5rem 0.25rem;
+      }
+      #repo-swimlane-chart { width: 100%; height: 380px; }
+      .chart-line { width: 100%; height: 460px; }
+      .image-size-table {
+        font-size: 0.85rem;
+      }
+      .image-size-table table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+      }
+      .image-size-table th {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+        padding: 0.35rem 0.5rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .image-size-table td {
+        padding: 0.35rem 0.5rem;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      .image-size-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .image-size-table .swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        margin-right: 0.45rem;
+        vertical-align: middle;
+      }
+      .image-size-table .size-cell {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
   </head>
   <body>
-    <div class="container-fluid px-4">
-      <h1>Autoware CI Metrics</h1>
-
-      <p>
-        <a href="https://github.com/autowarefoundation/autoware-ci-metrics">
-          https://github.com/autowarefoundation/autoware-ci-metrics
-        </a>
-      </p>
-
-      <div class="btn-group mb-3" role="group" aria-label="Time window">
-        <button type="button" class="btn btn-outline-primary" data-duration="1d">1d</button>
-        <button type="button" class="btn btn-outline-primary active" data-duration="7d">7d</button>
-        <button type="button" class="btn btn-outline-primary" data-duration="30d">30d</button>
-        <button type="button" class="btn btn-outline-primary" data-duration="90d">90d</button>
-        <button type="button" class="btn btn-outline-primary" data-duration="1y">1y</button>
-        <button type="button" class="btn btn-outline-primary" data-duration="all">All</button>
+    <header class="dashboard-header">
+      <div class="container-fluid px-4 d-flex align-items-center gap-3 flex-wrap">
+        <div class="me-auto">
+          <h1 class="title">Autoware CI Metrics</h1>
+          <div class="subtitle">Upstream build, test, and image-size health</div>
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Time window">
+          <button type="button" class="btn btn-outline-primary" data-duration="1d">1d</button>
+          <button type="button" class="btn btn-outline-primary active" data-duration="7d">7d</button>
+          <button type="button" class="btn btn-outline-primary" data-duration="30d">30d</button>
+          <button type="button" class="btn btn-outline-primary" data-duration="90d">90d</button>
+          <button type="button" class="btn btn-outline-primary" data-duration="1y">1y</button>
+          <button type="button" class="btn btn-outline-primary" data-duration="all">All</button>
+        </div>
+        <a
+          class="btn btn-sm btn-outline-secondary"
+          href="https://github.com/autowarefoundation/autoware-ci-metrics"
+          target="_blank"
+          rel="noopener"
+        >GitHub</a>
       </div>
+    </header>
 
-      <h2>Critical workflow runs (push to main)</h2>
-      <div id="repo-swimlane-chart"></div>
+    <main class="container-fluid px-4 pb-4">
+      <div class="section-label">Workflow health</div>
 
-      <h2>Docker image sizes (uncompressed)</h2>
-      <div id="docker-chart-uncompressed"></div>
+      <section class="chart-card">
+        <header>
+          <h2>Critical workflow runs</h2>
+          <div class="subtitle">
+            build-and-test on push/main for
+            <code>autoware_core</code>, <code>autoware_universe</code>,
+            <code>autoware_tools</code>. Size = duration, color = conclusion.
+            Click a run to open it on GitHub.
+          </div>
+        </header>
+        <div class="chart-body">
+          <div id="repo-swimlane-chart"></div>
+        </div>
+      </section>
 
-      <h2>Docker image sizes (compressed)</h2>
-      <div id="docker-chart-compressed"></div>
+      <section class="chart-card">
+        <header>
+          <h2>docker-build-and-push execution times</h2>
+          <div class="subtitle">
+            Wall-clock duration on push-to-main, filtered to &gt; 20 min to
+            drop no-op fast paths. Upstream
+            <code>autowarefoundation/autoware</code>.
+          </div>
+        </header>
+        <div class="chart-body">
+          <div id="docker-build-and-push-time-chart" class="chart-line"></div>
+        </div>
+      </section>
 
-      <h2>docker-build-and-push execution times</h2>
-      <div id="docker-build-and-push-time-chart"></div>
+      <section class="chart-card">
+        <header>
+          <h2>health-check execution times</h2>
+          <div class="subtitle">
+            Per-job durations of the nightly health-check workflow.
+            Upstream <code>autowarefoundation/autoware</code>.
+          </div>
+        </header>
+        <div class="chart-body">
+          <div id="health-check-time-chart" class="chart-line"></div>
+        </div>
+      </section>
 
-      <h2>health-check execution times</h2>
-      <div id="health-check-time-chart"></div>
-    </div>
+      <div class="section-label">Docker images</div>
+
+      <section class="chart-card">
+        <header class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+          <div>
+            <h2>Image sizes (uncompressed)</h2>
+            <div class="subtitle">
+              Extracted layer sizes post-pull, per canonical tag.
+            </div>
+          </div>
+          <div class="btn-group btn-group-sm" role="group" aria-label="ROS distro">
+            <button type="button" class="btn btn-outline-primary" data-distro="humble">humble</button>
+            <button type="button" class="btn btn-outline-primary active" data-distro="jazzy">jazzy</button>
+            <button type="button" class="btn btn-outline-primary" data-distro="all">all</button>
+          </div>
+        </header>
+        <div class="chart-body">
+          <div class="row g-3 align-items-center">
+            <div class="col-lg-9">
+              <div id="docker-chart-uncompressed" class="chart-line"></div>
+            </div>
+            <div class="col-lg-3">
+              <div id="docker-table-uncompressed" class="image-size-table"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="chart-card">
+        <header class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+          <div>
+            <h2>Image sizes (compressed)</h2>
+            <div class="subtitle">
+              On-registry manifest sizes, per canonical tag.
+            </div>
+          </div>
+          <div class="btn-group btn-group-sm" role="group" aria-label="ROS distro">
+            <button type="button" class="btn btn-outline-primary" data-distro="humble">humble</button>
+            <button type="button" class="btn btn-outline-primary active" data-distro="jazzy">jazzy</button>
+            <button type="button" class="btn btn-outline-primary" data-distro="all">all</button>
+          </div>
+        </header>
+        <div class="chart-body">
+          <div class="row g-3 align-items-center">
+            <div class="col-lg-9">
+              <div id="docker-chart-compressed" class="chart-line"></div>
+            </div>
+            <div class="col-lg-3">
+              <div id="docker-table-compressed" class="image-size-table"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
     <script src="./main.js"></script>
   </body>
 </html>
