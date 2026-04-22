@@ -125,7 +125,18 @@ function insideZoom() {
 
 function workflowLineOption(title, runs, jobNames, cutoff) {
   const slice = withinWindow(runs || [], cutoff);
-  const series = jobNames.map(name => ({
+
+  // Success runs drive the line series. Runs without a conclusion (legacy
+  // data and per-job workflows like health-check) are treated as success
+  // for back-compat.
+  const successRuns = slice.filter(
+    r => !r.conclusion || r.conclusion === 'success'
+  );
+  const nonSuccessRuns = slice.filter(
+    r => r.conclusion && r.conclusion !== 'success'
+  );
+
+  const lineSeries = jobNames.map(name => ({
     name,
     type: 'line',
     showSymbol: true,
@@ -133,7 +144,7 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
     symbolSize: 9,
     lineStyle: { width: 4 },
     emphasis: { focus: 'series', scale: 1.4 },
-    data: slice
+    data: successRuns
       .map(r => {
         const v = r.jobs && r.jobs[name];
         if (!v) return null;
@@ -141,6 +152,45 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
       })
       .filter(p => p && p[1] > 0),
   }));
+
+  // Bucket non-success runs by conclusion so each gets its own legend
+  // entry + colour. Uses the first job name as the y-axis value — for
+  // docker-build-and-push that's the "total" wall-clock; for health-check
+  // this path is empty because its runs carry no conclusion (accurate=True
+  // + only_success=True by default).
+  const byConclusion = {};
+  nonSuccessRuns.forEach(r => {
+    const v = r.jobs && r.jobs[jobNames[0]];
+    if (v == null) return;
+    if (!byConclusion[r.conclusion]) byConclusion[r.conclusion] = [];
+    byConclusion[r.conclusion].push({
+      value: [new Date(r.date).getTime(), v / 3600],
+      runMeta: {
+        html_url: r.html_url,
+        conclusion: r.conclusion,
+        duration: v,
+        date: r.date,
+      },
+    });
+  });
+  const conclusionKeys = CONCLUSION_ORDER.filter(k => byConclusion[k]).concat(
+    Object.keys(byConclusion).filter(k => !CONCLUSION_ORDER.includes(k))
+  );
+  const scatterSeries = conclusionKeys.map(k => ({
+    name: conclusionStyle(k).label,
+    type: 'scatter',
+    symbolSize: 12,
+    itemStyle: {
+      color: conclusionStyle(k).color,
+      borderColor: '#fff',
+      borderWidth: 1,
+    },
+    emphasis: { scale: 1.2 },
+    data: byConclusion[k],
+    z: 3,
+  }));
+
+  const series = [...lineSeries, ...scatterSeries];
   return {
     title: { text: title, left: 'left' },
     grid: { left: 60, right: 30, top: 70, bottom: 50 },
@@ -631,12 +681,14 @@ fetch('github_action_data.json')
     charts.dockerCompressed = echarts.init(document.querySelector('#docker-chart-compressed'));
     charts.dockerUncompressed = echarts.init(document.querySelector('#docker-chart-uncompressed'));
 
-    charts.repoSwimlane.on('click', params => {
+    const openRunUrlOnClick = params => {
       const meta = params.data && params.data.runMeta;
       if (meta && meta.html_url) {
         window.open(meta.html_url, '_blank', 'noopener');
       }
-    });
+    };
+    charts.repoSwimlane.on('click', openRunUrlOnClick);
+    charts.dockerBuild.on('click', openRunUrlOnClick);
 
     renderAll();
     wireDurationButtons();

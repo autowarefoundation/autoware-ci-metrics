@@ -37,9 +37,12 @@ WORKFLOWS = {
         "accurate": False,
         "event": "push",
         "branch": "main",
-        # > 20 min — anything shorter is a no-op skip via changed-files gate.
+        # min_seconds only applies to success runs (filters out the no-op
+        # changed-files fast path); non-success runs of any duration are
+        # kept so the dashboard can colour them.
         "min_seconds": 60 * 20,
         "max_seconds": 3600 * 10,
+        "only_success": False,
     },
 }
 
@@ -118,6 +121,7 @@ def append_workflow_runs(
                             "duration": run["duration"],
                             "jobs": run["jobs"],
                             "conclusion": run["conclusion"],
+                            "html_url": run.get("html_url", ""),
                         }
                     )
                     + "\n"
@@ -155,16 +159,23 @@ def collect_workflow_runs(
         created_after=cursor,
         event=spec["event"],
         branch=spec["branch"],
+        only_success=spec.get("only_success", True),
     )
     print(f"  fetched {len(fetched)} runs from API")
 
-    in_band = [
-        r
-        for r in fetched
-        if spec["min_seconds"] < r["duration"] < spec["max_seconds"]
-    ]
-    new_runs = [r for r in in_band if r["id"] not in existing_ids]
-    print(f"  in-band: {len(in_band)}; new (deduped): {len(new_runs)}")
+    # max_seconds is a universal sanity cap. min_seconds only filters
+    # *success* runs (drops the changed-files no-op fast path) — failures
+    # of any duration are kept so the dashboard can surface them.
+    def in_band(r):
+        if r["duration"] >= spec["max_seconds"]:
+            return False
+        if r["conclusion"] == "success" and r["duration"] <= spec["min_seconds"]:
+            return False
+        return True
+
+    in_band_runs = [r for r in fetched if in_band(r)]
+    new_runs = [r for r in in_band_runs if r["id"] not in existing_ids]
+    print(f"  in-band: {len(in_band_runs)}; new (deduped): {len(new_runs)}")
 
     append_workflow_runs(data_dir, workflow_id, new_runs)
 
@@ -179,6 +190,7 @@ def collect_workflow_runs(
             "duration": r["duration"],
             "jobs": r["jobs"],
             "conclusion": r["conclusion"],
+            "html_url": r.get("html_url", ""),
         }
         for r in new_runs
     ]
@@ -363,15 +375,17 @@ def export_to_json(health_check, docker_build_and_push, docker_images, repo_ci_r
         return out
 
     def _export_docker_build_and_push(workflow):
-        # Single wall-clock duration per run — push-to-main only, > 20 min
-        # filtering is done at fetch time. Surface it as a one-key "jobs" dict
-        # so the dashboard's workflowSeries() can treat both charts uniformly.
+        # Single wall-clock duration per run — push-to-main only. Non-success
+        # runs are included so the dashboard can plot failures/cancellations
+        # alongside the success line, coloured by conclusion.
         return [
             {
                 "run_id": run["id"],
                 "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
                 "duration": run["duration"] / 3600,
                 "jobs": {"total": run["duration"]},
+                "conclusion": run.get("conclusion", "success"),
+                "html_url": run.get("html_url", ""),
             }
             for run in workflow
         ]
