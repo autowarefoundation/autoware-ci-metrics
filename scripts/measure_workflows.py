@@ -2,102 +2,192 @@ import argparse
 import functools
 import json
 import pathlib
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 print = functools.partial(print, flush=True)
 
 import github_api
 
-# Constant
 REPO = "autowarefoundation/autoware"
 HEALTH_CHECK_WORKFLOW_ID = "health-check.yaml"
 DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = "docker-build-and-push.yaml"
-DOCKER_ORGS = "autowarefoundation"
-DOCKER_IMAGE = "autoware"
-DATA_DIR = "./data/"
+
+CANONICAL_TAGS = [
+    "core-dependencies-humble",
+    "universe-dependencies-humble",
+    "universe-dependencies-cuda-humble",
+    "core-dependencies-jazzy",
+    "universe-dependencies-jazzy",
+    "universe-dependencies-cuda-jazzy",
+]
+
+# Backfill window when no JSONL exists yet (first run after migration).
+BACKFILL_DAYS = 90
+# Overlap re-fetched on each incremental run, in case late-completing runs
+# slipped in just under the previous cursor.
+CURSOR_OVERLAP = timedelta(days=1)
+# Drop runs outside this band — they're bogus (cancelled-fast or hung).
+MIN_RUN_SECONDS = 60 * 3
+MAX_RUN_SECONDS = 3600 * 10
 
 
-def get_workflow_runs(github_token, date_threshold):
-    workflow_api = github_api.GitHubWorkflowAPI(github_token)
+def workflow_basename(workflow_id: str) -> str:
+    if workflow_id.endswith(".yaml"):
+        return workflow_id[:-5]
+    if workflow_id.endswith(".yml"):
+        return workflow_id[:-4]
+    return workflow_id
 
-    # TODO: Enable accurate options when it runs on GitHub Actions (because of rate limit)
-    health_check = workflow_api.get_workflow_duration_list(
-        REPO, HEALTH_CHECK_WORKFLOW_ID, True, date_threshold
+
+def workflow_runs_dir(data_dir: pathlib.Path) -> pathlib.Path:
+    return data_dir / "workflow_runs"
+
+
+def load_existing_workflow_runs(
+    data_dir: pathlib.Path, workflow_id: str
+) -> tuple[set, Optional[datetime], list[dict]]:
+    """Read all yearly JSONL files for a workflow.
+
+    Returns (existing_run_ids, max_created_at, all_entries_with_datetime).
+    """
+    base = workflow_basename(workflow_id)
+    files = sorted(workflow_runs_dir(data_dir).glob(f"{base}-*.jsonl"))
+    run_ids: set = set()
+    max_dt: Optional[datetime] = None
+    entries: list[dict] = []
+    for path in files:
+        with path.open() as f:
+            for line in f:
+                entry = json.loads(line)
+                entry["created_at"] = datetime.fromisoformat(entry["created_at"])
+                entries.append(entry)
+                run_ids.add(entry["run_id"])
+                if max_dt is None or entry["created_at"] > max_dt:
+                    max_dt = entry["created_at"]
+    return run_ids, max_dt, entries
+
+
+def append_workflow_runs(
+    data_dir: pathlib.Path, workflow_id: str, runs: list[dict]
+) -> int:
+    """Append new GitHub-shaped run dicts to the appropriate yearly JSONL."""
+    if not runs:
+        return 0
+    base = workflow_basename(workflow_id)
+    out_dir = workflow_runs_dir(data_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    by_year: dict[int, list[dict]] = defaultdict(list)
+    for run in runs:
+        by_year[run["created_at"].year].append(run)
+
+    total = 0
+    for year, year_runs in sorted(by_year.items()):
+        year_runs.sort(key=lambda r: r["created_at"])
+        path = out_dir / f"{base}-{year}.jsonl"
+        with path.open("a") as f:
+            for run in year_runs:
+                f.write(
+                    json.dumps(
+                        {
+                            "run_id": run["id"],
+                            "created_at": run["created_at"].isoformat(),
+                            "duration": run["duration"],
+                            "jobs": run["jobs"],
+                            "conclusion": run["conclusion"],
+                        }
+                    )
+                    + "\n"
+                )
+                total += 1
+        print(f"    appended {len(year_runs)} -> {path}")
+    return total
+
+
+def collect_workflow_runs(
+    workflow_id: str, data_dir: pathlib.Path, github_token: str
+) -> list[dict]:
+    """Incrementally fetch + persist runs for a workflow; return all known runs."""
+    print(f"workflow: {workflow_id}")
+    existing_ids, max_dt, existing_entries = load_existing_workflow_runs(
+        data_dir, workflow_id
     )
-    docker_build_and_push = workflow_api.get_workflow_duration_list(
-        REPO, DOCKER_BUILD_AND_PUSH_WORKFLOW_ID, True, date_threshold
+
+    if max_dt is None:
+        cursor = datetime.now(timezone.utc) - timedelta(days=BACKFILL_DAYS)
+        print(f"  no existing data; backfilling from {cursor.date()}")
+    else:
+        cursor = max_dt - CURSOR_OVERLAP
+        print(
+            f"  existing through {max_dt.isoformat()}; fetching since {cursor.isoformat()}"
+        )
+
+    api = github_api.GitHubWorkflowAPI(github_token)
+    fetched = api.get_workflow_duration_list(
+        REPO, workflow_id, accurate=True, created_after=cursor
     )
+    print(f"  fetched {len(fetched)} runs from API")
 
-    # Exclude outliers (TODO: Fix outliers appears in inaccurate mode)
-    health_check = [
-        item for item in health_check if 60 * 3 < item["duration"] < 3600 * 10
+    in_band = [
+        r for r in fetched if MIN_RUN_SECONDS < r["duration"] < MAX_RUN_SECONDS
     ]
-    docker_build_and_push = [
-        item for item in docker_build_and_push if 60 * 3 < item["duration"] < 3600 * 10
+    new_runs = [r for r in in_band if r["id"] not in existing_ids]
+    print(f"  in-band: {len(in_band)}; new (deduped): {len(new_runs)}")
+
+    append_workflow_runs(data_dir, workflow_id, new_runs)
+
+    # Existing entries already have datetime created_at + run_id; expose `id`
+    # so export_to_json can treat them uniformly with freshly-fetched runs.
+    for entry in existing_entries:
+        entry["id"] = entry["run_id"]
+    combined = existing_entries + [
+        {
+            "id": r["id"],
+            "created_at": r["created_at"],
+            "duration": r["duration"],
+            "jobs": r["jobs"],
+            "conclusion": r["conclusion"],
+        }
+        for r in new_runs
     ]
-    return health_check, docker_build_and_push
+    combined.sort(key=lambda r: r["created_at"])
+    return combined
 
 
-def get_docker_image_analysis_from_data(date_threshold, data_dir=DATA_DIR):
-    """Load docker image data from the data directory."""
-    data_path = pathlib.Path(data_dir)
-    if not data_path.exists():
-        print(f"Data directory {data_path} does not exist")
-        return {}
-
-    docker_images = {
-        "core-dependencies-humble": [],
-        "universe-dependencies-humble": [],
-        "universe-dependencies-cuda-humble": [],
-        "core-dependencies-jazzy": [],
-        "universe-dependencies-jazzy": [],
-        "universe-dependencies-cuda-jazzy": [],
-    }
-
-    # Find all JSON files in the data directory
-    json_files = sorted(data_path.glob("docker_image_sizes_*.json"))
-
-    for json_file in json_files:
-        try:
-            with open(json_file) as f:
-                data = json.load(f)
-
-            # Parse the timestamp
-            timestamp = datetime.fromisoformat(data["timestamp"])
-            if timestamp < date_threshold:
-                continue
-
-            # Process each image in the data
-            for image_data in data.get("images", []):
-                tag = image_data["tag"]
-
+def load_docker_image_history(data_dir: pathlib.Path) -> dict:
+    """Read all yearly docker JSONL files into the dashboard-shaped dict."""
+    docker_images: dict[str, list[dict]] = {tag: [] for tag in CANONICAL_TAGS}
+    files = sorted(data_dir.glob("docker_image_sizes-*.jsonl"))
+    for path in files:
+        with path.open() as f:
+            for line in f:
+                entry = json.loads(line)
+                tag = entry.get("tag", "")
+                if tag not in docker_images:
+                    continue
                 docker_images[tag].append(
                     {
-                        "size_compressed": image_data.get("compressed_size_bytes", 0),
-                        "size_uncompressed": image_data.get(
+                        "size_compressed": entry.get("compressed_size_bytes", 0),
+                        "size_uncompressed": entry.get(
                             "uncompressed_size_bytes", 0
                         ),
-                        "date": datetime.fromisoformat(
-                            image_data["fetched_at"]
-                        ).strftime("%Y/%m/%d %H:%M:%S"),
+                        "date": datetime.fromisoformat(entry["fetched_at"]).strftime(
+                            "%Y/%m/%d %H:%M:%S"
+                        ),
                         "tag": tag,
-                        "digest": image_data.get("digest", ""),
+                        "digest": entry.get("digest", ""),
                     }
                 )
-        except Exception as e:
-            print(f"Error processing {json_file}: {e}")
-            continue
-
+    for tag, entries in docker_images.items():
+        print(f"  {tag}: {len(entries)} data points")
     return docker_images
 
 
-def export_to_json(
-    health_check,
-    docker_build_and_push,
-    docker_images,
-):
-    def _export_health_check_to_json(workflow):
-        json_data = []
+def export_to_json(health_check, docker_build_and_push, docker_images):
+    def _export_health_check(workflow):
+        out = []
         for run in workflow:
             jobs = {}
             for job in run["jobs"]:
@@ -107,10 +197,9 @@ def export_to_json(
                     jobs["nightly-amd64"] = run["jobs"][job]
                 elif "docker-build (main-arm64)" in job:
                     jobs["main-arm64"] = run["jobs"][job]
-            if len(jobs) == 0:
+            if not jobs:
                 continue
-
-            json_data.append(
+            out.append(
                 {
                     "run_id": run["id"],
                     "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
@@ -118,10 +207,10 @@ def export_to_json(
                     "jobs": jobs,
                 }
             )
-        return json_data
+        return out
 
-    def _export_docker_build_and_push_to_json(workflow):
-        json_data = []
+    def _export_docker_build_and_push(workflow):
+        out = []
         for run in workflow:
             jobs = {}
             for job in run["jobs"]:
@@ -137,10 +226,9 @@ def export_to_json(
                     jobs["tools-amd64"] = run["jobs"][job]
                 elif "docker-build-and-push-tools (arm64)" in job:
                     jobs["tools-arm64"] = run["jobs"][job]
-            if len(jobs) == 0:
+            if not jobs:
                 continue
-
-            json_data.append(
+            out.append(
                 {
                     "run_id": run["id"],
                     "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
@@ -148,23 +236,22 @@ def export_to_json(
                     "jobs": jobs,
                 }
             )
-        return json_data
+        return out
 
-    json_data = {
+    return {
         "workflow_time": {
-            "health-check": _export_health_check_to_json(health_check),
-            "docker-build-and-push": _export_docker_build_and_push_to_json(
+            "health-check": _export_health_check(health_check),
+            "docker-build-and-push": _export_docker_build_and_push(
                 docker_build_and_push
             ),
         },
         "docker_images": docker_images,
     }
-    return json_data
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Fetch GitHub Action's run data and plot it."
+        description="Incrementally fetch GitHub Actions metrics + render dashboard JSON."
     )
     parser.add_argument(
         "--github_token",
@@ -173,33 +260,23 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data-dir",
-        default=DATA_DIR,
-        help="Directory containing data files.",
+        required=True,
+        type=pathlib.Path,
+        help="Path to the data-storage checkout.",
     )
     args = parser.parse_args()
 
-    github_token = args.github_token
-
-    date_threshold = datetime.now(timezone.utc) - timedelta(days=90)
-    print(f"Fetching workflow runs since {date_threshold.date()}")
-    (
-        health_check,
-        docker_build_and_push,
-    ) = get_workflow_runs(github_token, date_threshold)
-    print(f"  health-check: {len(health_check)} runs")
-    print(f"  docker-build-and-push: {len(docker_build_and_push)} runs")
-
-    print(f"Loading docker image data from {args.data_dir}")
-    docker_images = get_docker_image_analysis_from_data(date_threshold, args.data_dir)
-    for tag, entries in docker_images.items():
-        print(f"  {tag}: {len(entries)} data points")
-
-    json_data = export_to_json(
-        health_check,
-        docker_build_and_push,
-        docker_images,
+    health_check = collect_workflow_runs(
+        HEALTH_CHECK_WORKFLOW_ID, args.data_dir, args.github_token
+    )
+    docker_build_and_push = collect_workflow_runs(
+        DOCKER_BUILD_AND_PUSH_WORKFLOW_ID, args.data_dir, args.github_token
     )
 
-    with open("github_action_data.json", "w") as jsonfile:
-        json.dump(json_data, jsonfile, indent=4)
-    print(f"Wrote github_action_data.json")
+    print(f"Loading docker image history from {args.data_dir}")
+    docker_images = load_docker_image_history(args.data_dir)
+
+    json_data = export_to_json(health_check, docker_build_and_push, docker_images)
+    with open("github_action_data.json", "w") as f:
+        json.dump(json_data, f, indent=4)
+    print("Wrote github_action_data.json")

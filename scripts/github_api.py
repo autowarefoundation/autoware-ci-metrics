@@ -21,13 +21,17 @@ class GitHubWorkflowAPI:
         repo: str,
         workflow_id: str,
         accurate=False,
-        date_threshold: Optional[datetime] = None,
+        created_after: Optional[datetime] = None,
     ):
         payloads = {"per_page": 100, "status": "completed", "page": "1"}
+        if created_after is not None:
+            # GitHub accepts "?created=>=YYYY-MM-DDTHH:MM:SSZ" as a server-side
+            # filter — slashes the result set so we only page through new runs.
+            payloads["created"] = ">=" + created_after.strftime(self.time_format)
         endpoint = (
             f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/runs"
         )
-        print(f"Fetching workflow runs from {endpoint}")
+        print(f"Fetching workflow runs from {endpoint} (created_after={created_after})")
 
         first_page_response = requests.get(
             endpoint, headers=self.headers, params=payloads
@@ -65,9 +69,6 @@ class GitHubWorkflowAPI:
             run["updated_at"] = datetime.strptime(
                 run["updated_at"], self.time_format
             ).replace(tzinfo=timezone.utc)
-        workflow_runs = [
-            run for run in workflow_runs if run["created_at"] > date_threshold
-        ]
 
         # Sorting by created_at (oldest to newest, utility function)
         workflow_runs = sorted(workflow_runs, key=lambda k: k["created_at"])
