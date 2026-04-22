@@ -223,23 +223,36 @@ function repoSwimlaneOption(cutoff) {
   const legendNames = conclusionKeys.map(k => conclusionStyle(k).label);
 
   return {
-    grid: { left: 160, right: 30, top: 50, bottom: 40 },
+    grid: { left: 160, right: 30, top: 50, bottom: 70 },
     legend: { top: 10, data: legendNames },
-    xAxis: { type: 'time' },
+    xAxis: {
+      type: 'time',
+      // yAxis range includes 0, so without this the x-axis line would be
+      // drawn at y=0 (the centre of autoware_core's row) instead of at
+      // the plot's bottom edge.
+      axisLine: { onZero: false },
+    },
     yAxis: {
       type: 'value',
-      min: -0.5,
-      max: REPOS.length - 0.5,
-      interval: 1,
-      inverse: false,
+      // inverse flips value-axis direction so REPOS[0] (autoware_core)
+      // renders at the top and REPOS[last] at the bottom, matching the
+      // natural top-to-bottom reading of the REPOS array.
+      inverse: true,
+      // Slight overshoot beyond lane centers so top-row jitter doesn't
+      // hug the legend and bottom-row jitter doesn't hug the date axis.
+      min: -0.6,
+      max: REPOS.length - 0.4,
       axisLabel: {
+        // Anchor labels at lane centers (0, 1, 2) rather than at the
+        // default tick positions which would land on lane boundaries.
+        customValues: REPOS.map((_, i) => i),
         formatter: v => REPOS[Math.round(v)] || '',
         fontSize: 12,
         color: '#444',
       },
       axisTick: { show: false },
       axisLine: { show: false },
-      splitLine: { lineStyle: { type: 'dashed', color: '#eee' } },
+      splitLine: { show: false },
     },
     dataZoom: insideZoom(),
     tooltip: {
@@ -261,7 +274,7 @@ function repoSwimlaneOption(cutoff) {
     series: [
       // One line per repo threading through the jittered bubble centers.
       // Silent + no tooltip + not in legend so they read as pure rails.
-      ...REPOS.map(repo => ({
+      ...REPOS.map((repo, i) => ({
         name: `${repo}__rail`,
         type: 'line',
         showSymbol: false,
@@ -270,6 +283,33 @@ function repoSwimlaneOption(cutoff) {
         lineStyle: { color: 'rgba(100,116,139,0.4)', width: 1 },
         data: rails.get(repo),
         z: 1,
+        // Attach the row separators to the first rail series (once only) —
+        // markLine is decoupled from axisLabel.customValues, so it won't
+        // duplicate at lane centers the way splitLine would.
+        ...(i === 0 ? {
+          markLine: {
+            silent: true,
+            symbol: 'none',
+            label: { show: false },
+            lineStyle: { type: 'solid', color: '#cbd5e1', width: 1 },
+            // Lane boundaries at y = -0.5, 0.5, 1.5, 2.5 — top + between
+            // rows + bottom, so the swimlane reads as a clearly bracketed
+            // strip rather than three floating rows.
+            data: Array.from({ length: REPOS.length + 1 }, (_, j) => ({
+              yAxis: j - 0.5,
+            })),
+          },
+          // Zebra-stripe the lanes with a very light gray so adjacent rows
+          // are easy to distinguish at a glance.
+          markArea: {
+            silent: true,
+            itemStyle: { color: 'rgba(0,0,0,0.035)' },
+            data: REPOS
+              .map((_, j) => j)
+              .filter(j => j % 2 === 0)
+              .map(j => [{ yAxis: j - 0.5 }, { yAxis: j + 0.5 }]),
+          },
+        } : {}),
       })),
       // Bubbles bucketed by conclusion so each gets its series color.
       ...conclusionKeys.map(k => ({
