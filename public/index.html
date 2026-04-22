@@ -2,6 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Autoware CI Metrics</title>
     <link
       href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"
@@ -11,7 +12,14 @@
       type="text/javascript"
       src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"
     ></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <style>
+      #repo-swimlane-chart { width: 100%; height: 380px; }
+      #health-check-time-chart,
+      #docker-build-and-push-time-chart,
+      #docker-chart-compressed,
+      #docker-chart-uncompressed { width: 100%; height: 500px; }
+    </style>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -20,7 +28,7 @@
     />
   </head>
   <body>
-    <div class="container">
+    <div class="container-fluid px-4">
       <h1>Autoware CI Metrics</h1>
 
       <p>
