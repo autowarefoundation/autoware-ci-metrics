@@ -50,15 +50,8 @@ jobs:
       - name: Install dependencies
         run: pip install requests numpy
 
-      - name: Restore cache
-        uses: actions/cache@v5
-        with:
-          path: cache
-          key: actions
-
       - name: Execute script
         run: |
-          mkdir -p cache
           python scripts/measure_workflows.py \
             --github_token ${{ github.token }} \
             --data-dir data-storage

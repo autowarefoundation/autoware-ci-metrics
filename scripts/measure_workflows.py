@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 print = functools.partial(print, flush=True)
 
 import github_api
-from colcon_log_analyzer import ColconLogAnalyzer
 
 # Constant
 REPO = "autowarefoundation/autoware"
@@ -15,28 +14,7 @@ HEALTH_CHECK_WORKFLOW_ID = "health-check.yaml"
 DOCKER_BUILD_AND_PUSH_WORKFLOW_ID = "docker-build-and-push.yaml"
 DOCKER_ORGS = "autowarefoundation"
 DOCKER_IMAGE = "autoware"
-CACHE_DIR = "./cache/"
 DATA_DIR = "./data/"
-
-
-# Utility function
-def try_cache(key: str, f):
-    import json
-    import pathlib
-
-    key = key.replace("/", "_")
-    cache_path = pathlib.Path(CACHE_DIR) / key
-
-    if cache_path.exists():
-        with open(cache_path, "r") as cache_file:
-            return json.load(cache_file)
-    else:
-        result = f()
-        if result is None:
-            raise Exception("Result is None")
-        with open(cache_path, "w") as cache_file:
-            json.dump(result, cache_file, indent=4)
-        return result
 
 
 def get_workflow_runs(github_token, date_threshold):
