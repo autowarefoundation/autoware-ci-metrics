@@ -148,9 +148,21 @@ function workflowLineOption(title, runs, jobNames, cutoff) {
       .map(r => {
         const v = r.jobs && r.jobs[name];
         if (!v) return null;
-        return [new Date(r.date).getTime(), v / 3600];
+        // Object form (value: […]) lets us carry runMeta through to the
+        // chart's click handler, so hovering a success point on
+        // docker-build-and-push opens that specific run. health-check
+        // data has no html_url so the click handler no-ops for it.
+        return {
+          value: [new Date(r.date).getTime(), v / 3600],
+          runMeta: {
+            html_url: r.html_url,
+            conclusion: 'success',
+            duration: v,
+            date: r.date,
+          },
+        };
       })
-      .filter(p => p && p[1] > 0),
+      .filter(p => p && p.value[1] > 0),
   }));
 
   // Bucket non-success runs by conclusion so each gets its own legend
