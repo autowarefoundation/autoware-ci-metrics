@@ -29,8 +29,8 @@ TAG_GROUPS = [
     ],
 ]
 TAGS = [tag for group in TAG_GROUPS for tag in group]
-OUTPUT_DIR = "data/docker_image_sizes"
-OUTPUT_FILE_TEMPLATE = "docker_image_sizes_{timestamp}.json"
+OUTPUT_DIR = "data-storage"
+OUTPUT_FILE_TEMPLATE = "docker_image_sizes-{year}.jsonl"
 
 
 def get_auth_token(github_token: str = "") -> str:
@@ -285,39 +285,42 @@ def main():
     print(f"Fetching Docker image sizes for {ORG}/{IMAGE}")
 
     try:
-        token_value = args.github_token
-        token = get_auth_token(token_value)
+        token = get_auth_token(args.github_token)
     except Exception as e:
         print(f"Warning: Failed to get auth token: {e}")
         token = ""
 
-    results = {
-        "registry": REGISTRY_URL,
-        "org": ORG,
-        "image": IMAGE,
-        "tags": TAGS,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "images": [],
-    }
-
-    print(f"Results")
-    print(results)
+    output_dir = pathlib.Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     pull_image = f"{REGISTRY}/{ORG}/{IMAGE}"
+    written = 0
     for group in TAG_GROUPS:
         for tag in group:
             print(f"Fetching size for tag: {tag}")
             size_info = get_image_size(token, tag)
-            results["images"].append(size_info)
-            if "error" not in size_info:
-                print(
-                    f"  {tag}: "
-                    f"{size_info['compressed_size_gb']} GB (compressed), "
-                    f"{size_info['uncompressed_size_gb']} GB (uncompressed) "
-                    f"with {size_info['num_layers']} layers"
-                )
-            else:
-                print(f"  {tag}: Error - {size_info['error']}")
+            if "error" in size_info:
+                print(f"  {tag}: Error - {size_info['error']} (skipped)")
+                continue
+            print(
+                f"  {tag}: "
+                f"{size_info['compressed_size_gb']} GB (compressed), "
+                f"{size_info['uncompressed_size_gb']} GB (uncompressed) "
+                f"with {size_info['num_layers']} layers"
+            )
+            line = {
+                "tag": size_info["tag"],
+                "fetched_at": size_info["fetched_at"],
+                "compressed_size_bytes": size_info["compressed_size_bytes"],
+                "uncompressed_size_bytes": size_info["uncompressed_size_bytes"],
+                "num_layers": size_info["num_layers"],
+                "digest": size_info["digest"],
+            }
+            year = datetime.fromisoformat(size_info["fetched_at"]).year
+            out_path = output_dir / OUTPUT_FILE_TEMPLATE.format(year=year)
+            with out_path.open("a") as f:
+                f.write(json.dumps(line) + "\n")
+            written += 1
         if args.allow_pruning_images:
             remove_docker_images(pull_image, group)
         else:
@@ -326,18 +329,7 @@ def main():
                 "off by default to protect local Docker state)."
             )
 
-    # Save results with timestamp
-    output_dir = pathlib.Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    output_filename = f"docker_image_sizes_{timestamp}.json"
-    output_path = output_dir / output_filename
-
-    with open(output_path, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print(f"Results saved to {output_path}")
+    print(f"Appended {written} measurements under {output_dir}/")
 
 
 if __name__ == "__main__":
