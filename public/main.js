@@ -6,15 +6,6 @@ const DURATION_DAYS = {
   'all': null,
 };
 
-const DOCKER_TAGS = [
-  'core-dependencies-humble',
-  'core-dependencies-jazzy',
-  'universe-dependencies-humble',
-  'universe-dependencies-jazzy',
-  'universe-dependencies-cuda-humble',
-  'universe-dependencies-cuda-jazzy',
-];
-
 const HEALTH_CHECK_JOBS = ['main-amd64', 'main-arm64', 'nightly-amd64'];
 // docker-build-and-push tracks one wall-clock total per push-to-main run.
 const DOCKER_BUILD_JOBS = ['total'];
@@ -51,7 +42,9 @@ function workflowSeries(runs, jobNames, cutoff) {
 }
 
 function dockerSeries(perTag, sizeField, cutoff) {
-  return DOCKER_TAGS.map(tag => {
+  // Iteration order is whatever the Python side wrote into github_action_data.json
+  // — driven by TAGS in scripts/image_tags.py, the single source of truth.
+  return Object.keys(perTag).map(tag => {
     const slice = withinWindow(perTag[tag] || [], cutoff);
     return {
       name: tag,

@@ -25,15 +25,7 @@ from docker_image_size import (
     get_auth_token,
     get_compressed_size,
 )
-
-CANONICAL_TAGS = [
-    "core-dependencies-humble",
-    "universe-dependencies-humble",
-    "universe-dependencies-cuda-humble",
-    "core-dependencies-jazzy",
-    "universe-dependencies-jazzy",
-    "universe-dependencies-cuda-jazzy",
-]
+from image_tags import TAGS as CANONICAL_TAGS
 
 
 def latest_recorded_digest(data_dir: pathlib.Path, tag: str) -> str:

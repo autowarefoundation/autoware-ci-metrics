@@ -10,25 +10,14 @@ from datetime import datetime, timezone
 import requests
 from subprocess import run, PIPE
 
+from image_tags import TAGS, TAG_GROUPS
+
 print = functools.partial(print, flush=True)
 
 REGISTRY = "ghcr.io"
 REGISTRY_URL = f"http://{REGISTRY}"
 ORG = "autowarefoundation"
 IMAGE = "autoware"
-TAG_GROUPS = [
-    [
-        "core-dependencies-humble",
-        "universe-dependencies-humble",
-        "universe-dependencies-cuda-humble",
-    ],
-    [
-        "core-dependencies-jazzy",
-        "universe-dependencies-jazzy",
-        "universe-dependencies-cuda-jazzy",
-    ],
-]
-TAGS = [tag for group in TAG_GROUPS for tag in group]
 OUTPUT_DIR = "data-storage"
 OUTPUT_FILE_TEMPLATE = "docker_image_sizes-{year}.jsonl"
 

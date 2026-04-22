@@ -9,17 +9,9 @@ from typing import Optional
 print = functools.partial(print, flush=True)
 
 import github_api
+from image_tags import TAGS as CANONICAL_TAGS
 
 REPO = "autowarefoundation/autoware"
-
-CANONICAL_TAGS = [
-    "core-dependencies-humble",
-    "universe-dependencies-humble",
-    "universe-dependencies-cuda-humble",
-    "core-dependencies-jazzy",
-    "universe-dependencies-jazzy",
-    "universe-dependencies-cuda-jazzy",
-]
 
 # Backfill window when no JSONL exists yet (first run after migration).
 BACKFILL_DAYS = 90
