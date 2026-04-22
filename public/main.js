@@ -432,6 +432,62 @@ function formatGb(bytes) {
   return `${(bytes / 1e9).toFixed(2)} GB`;
 }
 
+function relativeTime(iso) {
+  const then = new Date(iso);
+  const ms = Date.now() - then;
+  if (Number.isNaN(ms)) return '';
+  const mins = Math.round(ms / 60000);
+  const hours = Math.round(ms / 3600000);
+  const days = Math.round(ms / 86400000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
+function renderLatestRunsTable() {
+  const container = document.getElementById('swimlane-table');
+  if (!container) return;
+  const cutoff = cutoffDate(currentDuration);
+  const rows = REPOS.map(repo => {
+    const runs = withinWindow(
+      (rawData.repo_ci_runs || {})[repo] || [],
+      cutoff
+    );
+    if (!runs.length) {
+      return `
+        <tr>
+          <td>${escapeHtml(repo)}</td>
+          <td class="status-cell muted">no runs</td>
+        </tr>`;
+    }
+    const last = runs[runs.length - 1];
+    const style = conclusionStyle(last.conclusion);
+    return `
+      <tr class="run-row" data-url="${escapeHtml(last.html_url || '')}"
+          title="${escapeHtml(last.commit_title || style.label)}">
+        <td>${escapeHtml(repo)}</td>
+        <td class="status-cell">
+          <span class="conclusion-icon" style="color:${style.color};"
+                aria-label="${escapeHtml(style.label)}">${style.icon}</span>${escapeHtml(formatDuration(last.duration))} · ${escapeHtml(relativeTime(last.date))}
+        </td>
+      </tr>`;
+  }).join('');
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Repo</th><th class="status-cell">Latest</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  container.querySelectorAll('.run-row').forEach(row => {
+    const url = row.dataset.url;
+    if (!url) return;
+    row.addEventListener('click', () =>
+      window.open(url, '_blank', 'noopener'));
+  });
+}
+
 function renderImageSizeTable(containerId, sizeField) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -466,6 +522,7 @@ function renderImageSizeTable(containerId, sizeField) {
 function renderAll() {
   const cutoff = cutoffDate(currentDuration);
   charts.repoSwimlane.setOption(repoSwimlaneOption(cutoff), true);
+  renderLatestRunsTable();
   charts.healthCheck.setOption(
     workflowLineOption('Build duration',
       rawData.workflow_time['health-check'], HEALTH_CHECK_JOBS, cutoff),

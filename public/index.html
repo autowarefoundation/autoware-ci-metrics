@@ -134,6 +134,16 @@
         text-align: right;
         font-variant-numeric: tabular-nums;
       }
+      .image-size-table tr.run-row { cursor: pointer; }
+      .image-size-table tr.run-row:hover td { background: #f9fafb; }
+      .image-size-table .status-cell {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .image-size-table .status-cell .conclusion-icon {
+        margin-right: 0.25rem;
+      }
+      .image-size-table .muted { color: #9ca3af; font-style: italic; }
     </style>
   </head>
   <body>
@@ -180,7 +190,14 @@
           </div>
         </header>
         <div class="chart-body">
-          <div id="repo-swimlane-chart"></div>
+          <div class="row g-3 align-items-start">
+            <div class="col-lg-9">
+              <div id="repo-swimlane-chart"></div>
+            </div>
+            <div class="col-lg-3">
+              <div id="swimlane-table" class="image-size-table"></div>
+            </div>
+          </div>
         </div>
       </section>
 
