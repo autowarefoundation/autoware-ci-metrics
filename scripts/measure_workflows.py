@@ -394,6 +394,7 @@ def export_to_json(health_check, docker_build_and_push, docker_images, repo_ci_r
         return out
 
     return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "workflow_time": {
             "health-check": _export_health_check(health_check),
             "docker-build-and-push": _export_docker_build_and_push(

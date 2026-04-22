@@ -45,8 +45,32 @@ const SWIMLANE_JITTER = 0.32;
 
 let rawData = null;
 let charts = {};
-let currentDuration = '7d';
-let currentDistro = 'jazzy';
+
+// Initial state is hydrated from ?duration=…&distro=… so views are
+// shareable via URL. Anything not in the URL falls back to defaults.
+function readStateFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const d = params.get('duration');
+  const di = params.get('distro');
+  return {
+    duration: DURATION_DAYS.hasOwnProperty(d) ? d : '7d',
+    distro: ['humble', 'jazzy', 'all'].includes(di) ? di : 'jazzy',
+  };
+}
+const _initial = readStateFromUrl();
+let currentDuration = _initial.duration;
+let currentDistro = _initial.distro;
+
+function writeStateToUrl() {
+  const params = new URLSearchParams(window.location.search);
+  params.set('duration', currentDuration);
+  params.set('distro', currentDistro);
+  window.history.replaceState(
+    null,
+    '',
+    `${window.location.pathname}?${params.toString()}${window.location.hash}`
+  );
+}
 
 function tagMatchesDistro(tag) {
   return currentDistro === 'all' || tag.endsWith(`-${currentDistro}`);
@@ -466,35 +490,83 @@ function renderAll() {
   renderImageSizeTable('docker-table-compressed', 'size_compressed');
 }
 
+function syncButtonActive(selector, activeValue, attr) {
+  document.querySelectorAll(selector).forEach(b =>
+    b.classList.toggle('active', b.dataset[attr] === activeValue));
+}
+
 function wireDurationButtons() {
+  // Reflect the URL-hydrated state in button highlights before wiring.
+  syncButtonActive('[data-duration]', currentDuration, 'duration');
   document.querySelectorAll('[data-duration]').forEach(btn => {
     btn.addEventListener('click', () => {
       currentDuration = btn.dataset.duration;
-      document.querySelectorAll('[data-duration]').forEach(b =>
-        b.classList.toggle('active', b === btn));
+      syncButtonActive('[data-duration]', currentDuration, 'duration');
+      writeStateToUrl();
       renderAll();
     });
   });
 }
 
 function wireDistroButtons() {
+  syncButtonActive('[data-distro]', currentDistro, 'distro');
   document.querySelectorAll('[data-distro]').forEach(btn => {
     btn.addEventListener('click', () => {
       currentDistro = btn.dataset.distro;
       // Sync by value rather than element identity so a click on one
       // card's toggle also highlights the matching button on the other
       // card.
-      document.querySelectorAll('[data-distro]').forEach(b =>
-        b.classList.toggle('active', b.dataset.distro === currentDistro));
+      syncButtonActive('[data-distro]', currentDistro, 'distro');
+      writeStateToUrl();
       renderAll();
     });
   });
 }
 
+function setDashboardStatus(kind, innerHtml) {
+  const el = document.getElementById('dashboard-status');
+  if (!el) return;
+  el.className = `dashboard-status${kind ? ` ${kind}` : ''}`;
+  if (kind === null) {
+    el.hidden = true;
+    el.innerHTML = '';
+  } else {
+    el.hidden = false;
+    el.innerHTML = innerHtml;
+  }
+}
+
+// "Updated X ago" — staleness tint kicks in after 24h so the user sees
+// at a glance when a fetch / publish has stopped.
+function renderLastUpdated(iso) {
+  const el = document.getElementById('last-updated');
+  if (!el || !iso) return;
+  const then = new Date(iso);
+  const now = new Date();
+  const ms = now - then;
+  if (Number.isNaN(ms) || ms < 0) return;
+  const mins = Math.round(ms / 60000);
+  const hours = Math.round(ms / 3600000);
+  const days = Math.round(ms / 86400000);
+  let rel;
+  if (mins < 2) rel = 'just now';
+  else if (mins < 60) rel = `${mins}m ago`;
+  else if (hours < 24) rel = `${hours}h ago`;
+  else rel = `${days}d ago`;
+  el.textContent = `· updated ${rel}`;
+  el.title = then.toISOString();
+  el.classList.toggle('stale', ms > 24 * 3600 * 1000);
+}
+
 fetch('github_action_data.json')
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    return res.json();
+  })
   .then(json => {
     rawData = json;
+    setDashboardStatus(null);
+    renderLastUpdated(json.generated_at);
 
     charts.repoSwimlane = echarts.init(document.querySelector('#repo-swimlane-chart'));
     charts.healthCheck = echarts.init(document.querySelector('#health-check-time-chart'));
@@ -512,8 +584,18 @@ fetch('github_action_data.json')
     renderAll();
     wireDurationButtons();
     wireDistroButtons();
+    // Normalise the URL (strip unknown params, canonicalise values) once
+    // the hydrated state is actually applied.
+    writeStateToUrl();
 
     window.addEventListener('resize', () => {
       Object.values(charts).forEach(c => c.resize());
     });
+  })
+  .catch(err => {
+    console.error('dashboard load failed', err);
+    setDashboardStatus(
+      'error',
+      `Failed to load <code>github_action_data.json</code>: ${escapeHtml(err.message || String(err))}. Retry in a minute — if this persists, the Pages deploy may be mid-publish or the scraper may have errored.`
+    );
   });
