@@ -168,3 +168,9 @@
 {"tag": "core-dependencies-jazzy", "fetched_at": "2026-07-17T02:53:17.605411+00:00", "compressed_size_bytes": 1672794768, "uncompressed_size_bytes": 6635249448, "num_layers": 22, "digest": "sha256:00d046d0cac0dab1005892e3d091535f2ab4526bebf062fc4e70c77c69d30941"}
 {"tag": "universe-dependencies-jazzy", "fetched_at": "2026-07-17T02:53:40.616295+00:00", "compressed_size_bytes": 2374913390, "uncompressed_size_bytes": 9530630878, "num_layers": 29, "digest": "sha256:3f8062fc8e1bc9a180a1c7d3563a582a954c08820fc5d1b0bd26adef39d0d5de"}
 {"tag": "universe-dependencies-cuda-jazzy", "fetched_at": "2026-07-17T02:56:42.408047+00:00", "compressed_size_bytes": 8877983876, "uncompressed_size_bytes": 25578513335, "num_layers": 24, "digest": "sha256:c62916049636dc917fcac412d62b699b7c59c1ea22967dda2da6136d60f75abc"}
+{"tag": "core-dependencies-humble", "fetched_at": "2026-07-22T03:37:44.678122+00:00", "compressed_size_bytes": 0, "uncompressed_size_bytes": 6052716414, "num_layers": 0, "digest": ""}
+{"tag": "universe-dependencies-humble", "fetched_at": "2026-07-22T03:38:09.347779+00:00", "compressed_size_bytes": 0, "uncompressed_size_bytes": 8730614503, "num_layers": 0, "digest": ""}
+{"tag": "universe-dependencies-cuda-humble", "fetched_at": "2026-07-22T03:42:42.577849+00:00", "compressed_size_bytes": 0, "uncompressed_size_bytes": 34005070603, "num_layers": 0, "digest": ""}
+{"tag": "core-dependencies-jazzy", "fetched_at": "2026-07-22T03:43:45.248941+00:00", "compressed_size_bytes": 0, "uncompressed_size_bytes": 6634266055, "num_layers": 0, "digest": ""}
+{"tag": "universe-dependencies-jazzy", "fetched_at": "2026-07-22T03:44:08.442188+00:00", "compressed_size_bytes": 0, "uncompressed_size_bytes": 9529709862, "num_layers": 0, "digest": ""}
+{"tag": "universe-dependencies-cuda-jazzy", "fetched_at": "2026-07-22T03:47:09.090584+00:00", "compressed_size_bytes": 0, "uncompressed_size_bytes": 25577568898, "num_layers": 0, "digest": ""}
