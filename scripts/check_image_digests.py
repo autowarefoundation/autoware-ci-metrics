@@ -29,7 +29,7 @@ from image_tags import TAGS as CANONICAL_TAGS
 
 
 def latest_recorded_digest(data_dir: pathlib.Path, tag: str) -> str:
-    """Return the digest of the most recent JSONL entry for tag, or '' if none."""
+    """Return the latest digest, or '' if the measurement needs a retry."""
     latest_at = ""
     latest_digest = ""
     for path in sorted(data_dir.glob("docker_image_sizes-*.jsonl")):
@@ -41,7 +41,11 @@ def latest_recorded_digest(data_dir: pathlib.Path, tag: str) -> str:
                 fa = entry.get("fetched_at", "")
                 if fa > latest_at:
                     latest_at = fa
-                    latest_digest = entry.get("digest", "")
+                    complete = (
+                        (entry.get("compressed_size_bytes") or 0) > 0
+                        and (entry.get("uncompressed_size_bytes") or 0) > 0
+                    )
+                    latest_digest = entry.get("digest", "") if complete else ""
     return latest_digest
 
 
@@ -55,15 +59,21 @@ def main() -> int:
         token = get_auth_token(args.github_token)
     except Exception as e:
         print(f"Warning: failed to obtain registry token: {e}")
-        token = ""
+        return 1
 
     image = f"{REGISTRY_URL}/v2/{ORG}/{IMAGE}"
     changed = []
+    failed = False
     for tag in CANONICAL_TAGS:
         # Reuse the manifest fetcher; throw away size/layer count, keep digest.
-        _, _, current = get_compressed_size(image, tag, token)
+        try:
+            _, _, current = get_compressed_size(image, tag, token)
+        except Exception as e:
+            print(f"Error checking {tag}: {e}")
+            failed = True
+            continue
         recorded = latest_recorded_digest(args.data_dir, tag)
-        is_changed = current != recorded
+        is_changed = not recorded or current != recorded
         marker = "CHANGED" if is_changed else "same   "
         print(f"  {marker}  {tag}")
         print(f"      current : {current[:23] if current else '(unavailable)'}")
@@ -72,6 +82,10 @@ def main() -> int:
             changed.append(tag)
 
     print(f"\n{len(changed)}/{len(CANONICAL_TAGS)} tags need measurement")
+
+    # Do not report a successful no-op if the registry could not be checked.
+    if failed:
+        return 1
 
     out_path = os.environ.get("GITHUB_OUTPUT")
     if out_path:

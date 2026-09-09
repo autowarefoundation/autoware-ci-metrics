@@ -7,7 +7,6 @@ const DURATION_DAYS = {
   'all': null,
 };
 
-const HEALTH_CHECK_JOBS = ['main-amd64', 'main-arm64', 'nightly-amd64'];
 const DOCKER_BUILD_JOBS = ['total'];
 
 // ECharts' default palette pinned so the docker chart series colors and
@@ -87,6 +86,18 @@ function cutoffDate(durationKey) {
 function withinWindow(items, cutoff) {
   if (!cutoff) return items;
   return items.filter(d => new Date(d.date) >= cutoff);
+}
+
+function healthCheckJobNames(runs) {
+  return [...new Set((runs || []).flatMap(r => Object.keys(r.jobs || {})))]
+    .filter(name => currentDistro === 'all' || name.split('-')[1] === currentDistro)
+    .sort();
+}
+
+function validImageSizes(entries, sizeField) {
+  return (entries || [])
+    .filter(d => Number.isFinite(d[sizeField]) && d[sizeField] > 0)
+    .slice().sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
 function conclusionStyle(c) {
@@ -250,7 +261,7 @@ function workflowLineOption(title, runs, jobNames, cutoff, labelMap) {
   }));
 
   const series = [...lineSeries, ...scatterSeries];
-  const isEmpty = !successRuns.length && !nonSuccessRuns.length;
+  const isEmpty = !series.some(s => s.data.length);
   const option = {
     title: { text: title, left: 'left' },
     grid: { left: 60, right: 30, top: 70, bottom: 50 },
@@ -292,11 +303,8 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
     .map((tag, i) => ({ tag, paletteIndex: i }))
     .filter(({ tag }) => tagMatchesDistro(tag));
   const series = visibleTagEntries.map(({ tag, paletteIndex }) => {
-    // Defensive sort — per-tag arrays come from appended JSONL so they're
-    // effectively chronological, but we rely on it for the cutoff split.
-    const all = (perTag[tag] || []).slice().sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
-    );
+    // Ignore failed historical measurements and sort for the cutoff split.
+    const all = validImageSizes(perTag[tag], sizeField);
     const inWindow = cutoff
       ? all.filter(d => new Date(d.date) >= cutoff)
       : all;
@@ -396,10 +404,11 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
     },
     series,
   };
-  if (!visibleTagEntries.length) {
+  if (!series.some(s => s.data.length)) {
     option.graphic = {
       elements: emptyStateGraphic(
-        allTags.length ? 'No images for this distro' : 'No image data'),
+        !visibleTagEntries.length && allTags.length
+          ? 'No images for this distro' : 'No image size measurements'),
     };
   }
   return option;
@@ -635,14 +644,13 @@ function renderImageSizeTable(containerId, sizeField) {
     .map((tag, i) => ({ tag, paletteIndex: i }))
     .filter(({ tag }) => tagMatchesDistro(tag))
     .map(({ tag, paletteIndex }) => {
-      const entries = rawData.docker_images[tag] || [];
-      if (!entries.length) return '';
+      const entries = validImageSizes(rawData.docker_images[tag], sizeField);
       const latest = entries[entries.length - 1];
       const color = DOCKER_PALETTE[paletteIndex % DOCKER_PALETTE.length];
       return `
         <tr>
           <td><span class="swatch" style="background:${color}"></span>${escapeHtml(tag)}</td>
-          <td class="size-cell">${escapeHtml(formatGb(latest[sizeField] || 0))}</td>
+          <td class="size-cell">${latest ? escapeHtml(formatGb(latest[sizeField])) : '—'}</td>
         </tr>`;
     })
     .join('');
@@ -661,7 +669,8 @@ function renderAll() {
   renderLatestRunsTable();
   charts.healthCheck.setOption(
     workflowLineOption('Build duration',
-      rawData.workflow_time['health-check'], HEALTH_CHECK_JOBS, cutoff),
+      rawData.workflow_time['health-check'],
+      healthCheckJobNames(rawData.workflow_time['health-check']), cutoff),
     true
   );
   charts.dockerBuild.setOption(

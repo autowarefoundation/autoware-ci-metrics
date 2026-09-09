@@ -2,6 +2,7 @@ import argparse
 import functools
 import json
 import pathlib
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -163,13 +164,18 @@ def collect_workflow_runs(
     )
     print(f"  fetched {len(fetched)} runs from API")
 
-    # max_seconds is a universal sanity cap. min_seconds only filters
-    # *success* runs (drops the changed-files no-op fast path) — failures
-    # of any duration are kept so the dashboard can surface them.
+    # Bound individual jobs for per-job charts, not the sum of parallel jobs.
+    # min_seconds only filters successes (drops the no-op fast path).
+    # Short failures are kept so the dashboard can surface them.
     def in_band(r):
-        if r["duration"] >= spec["max_seconds"]:
+        duration = (
+            max(r["jobs"].values(), default=0)
+            if spec["accurate"]
+            else r["duration"]
+        )
+        if duration >= spec["max_seconds"]:
             return False
-        if r["conclusion"] == "success" and r["duration"] <= spec["min_seconds"]:
+        if r["conclusion"] == "success" and duration <= spec["min_seconds"]:
             return False
         return True
 
@@ -350,18 +356,33 @@ def load_docker_image_history(data_dir: pathlib.Path) -> dict:
     return docker_images
 
 
+def health_check_job_key(job_name: str) -> Optional[str]:
+    """Normalize both historical and reusable-workflow matrix job names."""
+    match = re.search(r"(?:docker-build|health-check) \(([^)]+)\)", job_name)
+    if not match:
+        return None
+    build_type = match.group(1)
+    # Before distro-qualified matrix names, these builds all used Humble.
+    legacy = {
+        "main": "main-humble-amd64",
+        "main-arm64": "main-humble-arm64",
+        "nightly": "nightly-humble-amd64",
+    }
+    build_type = legacy.get(build_type, build_type)
+    if re.fullmatch(r"(?:main|nightly)-[a-z]+-(?:amd64|arm64)", build_type):
+        return build_type
+    return None
+
+
 def export_to_json(health_check, docker_build_and_push, docker_images, repo_ci_runs):
     def _export_health_check(workflow):
         out = []
         for run in workflow:
             jobs = {}
-            for job in run["jobs"]:
-                if "docker-build (main)" in job:
-                    jobs["main-amd64"] = run["jobs"][job]
-                elif "docker-build (nightly)" in job:
-                    jobs["nightly-amd64"] = run["jobs"][job]
-                elif "docker-build (main-arm64)" in job:
-                    jobs["main-arm64"] = run["jobs"][job]
+            for job, duration in run["jobs"].items():
+                key = health_check_job_key(job)
+                if key:
+                    jobs[key] = duration
             if not jobs:
                 continue
             out.append(

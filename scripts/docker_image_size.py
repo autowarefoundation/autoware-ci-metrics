@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import socket
+import sys
 from datetime import datetime, timezone
 
 import requests
@@ -15,7 +16,7 @@ from image_tags import TAGS, TAG_GROUPS
 print = functools.partial(print, flush=True)
 
 REGISTRY = "ghcr.io"
-REGISTRY_URL = f"http://{REGISTRY}"
+REGISTRY_URL = f"https://{REGISTRY}"
 ORG = "autowarefoundation"
 IMAGE = "autoware"
 OUTPUT_DIR = "data-storage"
@@ -35,7 +36,6 @@ def get_auth_token(github_token: str = "") -> str:
         headers["Authorization"] = f"Bearer {github_token}"
         headers["Accept"] = "application/json"
         print("Requesting access token with pull scope")
-        print("Headers:", headers)
     else:
         print("Requesting anonymous access token")
 
@@ -45,79 +45,63 @@ def get_auth_token(github_token: str = "") -> str:
     return data.get("token", "")
 
 
+MANIFEST_ACCEPT = ", ".join(
+    [
+        "application/vnd.oci.image.index.v1+json",
+        "application/vnd.oci.image.manifest.v1+json",
+        "application/vnd.docker.distribution.manifest.list.v2+json",
+        "application/vnd.docker.distribution.manifest.v2+json",
+    ]
+)
+INDEX_MEDIA_TYPES = {
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+}
+
+
 def get_compressed_size(image: str, tag: str, token: str) -> tuple[int, int, str]:
-    """Get the compressed size of a Docker image from registry manifest.
+    """Return (compressed bytes, layer count, digest) for linux/amd64.
 
-    Returns a tuple of (compressed_size_bytes, num_layers, digest).
+    Accept both OCI and Docker formats. Failed lookups raise instead of
+    becoming zero-byte measurements or empty digests that look unchanged.
     """
-    try:
-        headers = {
-            "Authorization": f"Bearer {token}",
-        }
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": MANIFEST_ACCEPT,
+    }
+    response = requests.get(
+        f"{image}/manifests/{tag}", headers=headers, timeout=30
+    )
+    response.raise_for_status()
+    manifest = response.json()
+    digest = response.headers.get("Docker-Content-Digest", "")
 
-        # Get manifest list (handles multi-arch images)
-        manifest_list_url = f"{image}/manifests/{tag}"
-        headers_list = headers.copy()
-        headers_list["Accept"] = (
-            "application/vnd.docker.distribution.manifest.list.v2+json"
+    if manifest.get("mediaType") in INDEX_MEDIA_TYPES:
+        digest = next(
+            (
+                m["digest"]
+                for m in manifest.get("manifests", [])
+                if m.get("platform", {}).get("architecture") == "amd64"
+                and m.get("platform", {}).get("os") == "linux"
+            ),
+            "",
         )
-
-        response = requests.get(manifest_list_url, headers=headers_list, timeout=30)
+        if not digest:
+            raise ValueError(f"No linux/amd64 manifest for {tag}")
+        response = requests.get(
+            f"{image}/manifests/{digest}", headers=headers, timeout=30
+        )
         response.raise_for_status()
-        manifest_list = response.json()
+        manifest = response.json()
 
-        # Get the amd64 manifest (use first amd64 architecture)
-        amd64_manifest = None
-        amd64_digest = None
-
-        # Handle both manifest list and direct manifest
-        if manifest_list.get("mediaType") == (
-            "application/vnd.docker.distribution.manifest.list.v2+json"
-        ):
-            for m in manifest_list.get("manifests", []):
-                if m.get("platform", {}).get("architecture") == "amd64":
-                    amd64_digest = m["digest"]
-                    break
-
-            if not amd64_digest:
-                # Fallback to first manifest if no amd64
-                amd64_digest = manifest_list["manifests"][0]["digest"]
-        else:
-            # Already a direct manifest, not a list
-            amd64_manifest = manifest_list
-            amd64_digest = None
-
-        # Fetch the actual manifest if we have a digest
-        if amd64_digest:
-            headers_manifest = headers.copy()
-            headers_manifest["Accept"] = (
-                "application/vnd.docker.distribution.manifest.v2+json"
-            )
-            response = requests.get(
-                f"{image}/manifests/{amd64_digest}",
-                headers=headers_manifest,
-                timeout=30,
-            )
-            response.raise_for_status()
-            amd64_manifest = response.json()
-
-        if not amd64_manifest:
-            raise ValueError("Failed to retrieve manifest")
-
-        # Get manifest layer sizes (compressed)
-        total_compressed = 0
-        layers = amd64_manifest.get("layers", [])
-        for layer in layers:
-            total_compressed += layer.get("size", 0)
-
-        print(
-            f"Compressed size for {tag}: {total_compressed} bytes ({len(layers)} layers)"
-        )
-        return total_compressed, len(layers), amd64_digest or ""
-
-    except Exception as e:
-        print(f"Warning: Failed to get compressed size for {tag}: {e}")
-        return 0, 0, ""
+    layers = manifest.get("layers", [])
+    total_compressed = sum(layer["size"] for layer in layers)
+    if not digest or not layers or total_compressed <= 0:
+        raise ValueError(f"Incomplete image manifest for {tag}")
+    print(
+        f"Compressed size for {tag}: {total_compressed} bytes ({len(layers)} layers)"
+    )
+    return total_compressed, len(layers), digest
 
 
 def get_image_disk_usage(image_ref: str) -> int:
@@ -225,6 +209,8 @@ def get_image_size(token: str, tag: str) -> dict:
         # Get uncompressed size by pulling the image
         image = f"{REGISTRY}/{ORG}/{IMAGE}"
         uncompressed_size = get_uncompressed_size(image, tag)
+        if uncompressed_size <= 0:
+            raise ValueError(f"No uncompressed size available for {tag}")
 
         return {
             "tag": tag,
@@ -246,7 +232,7 @@ def get_image_size(token: str, tag: str) -> dict:
         }
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="Retrieve Docker image sizes from GHCR"
     )
@@ -286,7 +272,7 @@ def main():
         token = get_auth_token(args.github_token)
     except Exception as e:
         print(f"Warning: Failed to get auth token: {e}")
-        token = ""
+        return 1
 
     output_dir = pathlib.Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -300,6 +286,7 @@ def main():
 
     pull_image = f"{REGISTRY}/{ORG}/{IMAGE}"
     written = 0
+    failed = False
     for group in TAG_GROUPS:
         group_to_measure = [t for t in group if not selected or t in selected]
         if not group_to_measure:
@@ -309,6 +296,7 @@ def main():
             size_info = get_image_size(token, tag)
             if "error" in size_info:
                 print(f"  {tag}: Error - {size_info['error']} (skipped)")
+                failed = True
                 continue
             print(
                 f"  {tag}: "
@@ -338,7 +326,8 @@ def main():
             )
 
     print(f"Appended {written} measurements under {output_dir}/")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
