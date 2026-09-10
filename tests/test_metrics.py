@@ -62,6 +62,27 @@ class HealthCheckTests(unittest.TestCase):
             },
         )
 
+    def test_health_check_links_include_historical_run_ids(self):
+        run = {
+            "id": 34374527860,
+            "created_at": datetime(2026, 9, 9, tzinfo=timezone.utc),
+            "duration": 5786,
+            "jobs": {"health-check (main-jazzy-amd64) / docker-build": 5786},
+        }
+        for saved_url in (
+            None,
+            "",
+            "https://github.com/autowarefoundation/autoware/actions/runs/34374527860/attempts/2",
+        ):
+            with self.subTest(saved_url=saved_url):
+                run["html_url"] = saved_url
+                result = measure_workflows.export_to_json([run], [], {}, {})
+                self.assertEqual(
+                    result["workflow_time"]["health-check"][0]["html_url"],
+                    saved_url
+                    or "https://github.com/autowarefoundation/autoware/actions/runs/34374527860",
+                )
+
     def test_parallel_jobs_do_not_hit_aggregate_duration_cap(self):
         def run(run_id, durations):
             return {

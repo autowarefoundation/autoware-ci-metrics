@@ -8,6 +8,7 @@ const DURATION_DAYS = {
 };
 
 const DOCKER_BUILD_JOBS = ['total'];
+const IMAGE_VERSIONS_URL = 'https://github.com/orgs/autowarefoundation/packages/container/autoware/versions';
 
 // ECharts' default palette pinned so the docker chart series colors and
 // the latest-size table's swatches stay in sync by index.
@@ -206,10 +207,7 @@ function workflowLineOption(title, runs, jobNames, cutoff, labelMap) {
       .map(r => {
         const v = r.jobs && r.jobs[name];
         if (!v) return null;
-        // Object form (value: […]) lets us carry runMeta through to the
-        // chart's click handler, so hovering a success point on
-        // docker-build-and-push opens that specific run. health-check
-        // data has no html_url so the click handler no-ops for it.
+        // Keep the run URL on each point for click-through to GitHub.
         return {
           value: [new Date(r.date).getTime(), v / 3600],
           runMeta: {
@@ -311,6 +309,8 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
     const data = inWindow.map(d => ({
       value: [new Date(d.date).getTime(), d[sizeField] / 1e9],
       digest: d.digest,
+      html_url: d.html_url || IMAGE_VERSIONS_URL,
+      exactVersion: Boolean(d.html_url),
     }));
     // Leading anchor at the cutoff boundary carrying the last pre-cutoff
     // value. Ensures every tag has a visible line across the whole time
@@ -326,6 +326,8 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
         data.unshift({
           value: [cutoff.getTime(), beforeCutoff[sizeField] / 1e9],
           digest: beforeCutoff.digest,
+          html_url: beforeCutoff.html_url || IMAGE_VERSIONS_URL,
+          exactVersion: Boolean(beforeCutoff.html_url),
           // emptyCircle distinguishes a synthetic anchor from a real
           // measurement while still being hoverable for the tooltip.
           symbol: 'emptyCircle',
@@ -342,6 +344,8 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
         data.push({
           value: [now, last.value[1]],
           digest: last.digest,
+          html_url: last.html_url,
+          exactVersion: last.exactVersion,
           symbol: 'emptyCircle',
         });
       }
@@ -399,7 +403,10 @@ function dockerSizeOption(title, perTag, sizeField, cutoff) {
         if (digest && digest.startsWith('sha256:')) {
           digestHtml = `<br/><span style="font-family:monospace;font-size:11px;">${escapeHtml(digest.substring(0, 19))}...</span>`;
         }
-        return `<b>${escapeHtml(p.seriesName)}</b>: ${gb}GB${digestHtml}`;
+        const linkHint = p.data && p.data.exactVersion
+          ? 'Click to open this image version on GHCR'
+          : 'Version link unavailable; click to browse GHCR versions';
+        return `<b>${escapeHtml(p.seriesName)}</b>: ${gb}GB${digestHtml}<br/>${linkHint}`;
       },
     },
     series,
@@ -787,6 +794,13 @@ function createAllCharts() {
   };
   charts.repoSwimlane.on('click', openRunUrlOnClick);
   charts.dockerBuild.on('click', openRunUrlOnClick);
+  charts.healthCheck.on('click', openRunUrlOnClick);
+  const openImageUrlOnClick = params => {
+    const url = params.data && params.data.html_url;
+    if (url) window.open(url, '_blank', 'noopener');
+  };
+  charts.dockerCompressed.on('click', openImageUrlOnClick);
+  charts.dockerUncompressed.on('click', openImageUrlOnClick);
 }
 
 function updateThemeToggleLabel() {

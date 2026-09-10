@@ -8,18 +8,27 @@ const source = fs.readFileSync(path.join(__dirname, '../public/main.js'), 'utf8'
 
 function dashboard() {
   const table = {};
+  const handlers = {};
+  const opened = [];
   const context = vm.createContext({
     URLSearchParams,
-    window: { location: { search: '?duration=7d&distro=jazzy' } },
+    window: {
+      location: { search: '?duration=7d&distro=jazzy' },
+      open: (...args) => opened.push(args),
+    },
+    echarts: {
+      init: element => ({ on: (event, handler) => { handlers[element] = handler; } }),
+    },
     document: {
       documentElement: { getAttribute: () => 'light' },
       getElementById: () => table,
+      querySelector: selector => selector,
     },
     // Load chart functions without starting the page's network/bootstrap work.
     fetch: () => new Promise(() => {}),
   });
   vm.runInContext(source, context);
-  return { context, table, evaluate: expression => vm.runInContext(expression, context) };
+  return { context, table, handlers, opened, evaluate: expression => vm.runInContext(expression, context) };
 }
 
 test('health-check plots separate Jazzy jobs and switches distro', () => {
@@ -85,4 +94,53 @@ test('missing measurements display a dash and an empty chart, never zero GB', ()
   evaluate("rawData = {docker_images: images}; renderImageSizeTable('table', 'size_compressed')");
   assert.ok(table.innerHTML.includes('—'));
   assert.ok(!table.innerHTML.includes('0.00'));
+});
+
+
+test('clicking a health-check point opens its specific run', () => {
+  const { context, evaluate, handlers, opened } = dashboard();
+  const url = 'https://github.com/autowarefoundation/autoware/actions/runs/34374527860';
+  context.runs = [{ date: '2026/09/09 16:05:38', html_url: url,
+    jobs: { 'main-jazzy-amd64': 5786 } }];
+  evaluate('createAllCharts()');
+  const option = evaluate("workflowLineOption('Build duration', runs, healthCheckJobNames(runs), null)");
+  handlers['#health-check-time-chart']({ data: option.series[0].data[0] });
+  assert.deepEqual(opened, [[url, '_blank', 'noopener']]);
+});
+
+test('both image charts open recorded versions, including synthetic anchors', () => {
+  const { context, evaluate, handlers, opened } = dashboard();
+  const oldUrl = 'https://github.com/orgs/autowarefoundation/packages/container/autoware/101';
+  const newUrl = 'https://github.com/orgs/autowarefoundation/packages/container/autoware/202';
+  context.images = { 'core-dependencies-jazzy': [
+    { date: '2026/09/01', size_compressed: 1e9, size_uncompressed: 3e9,
+      digest: 'sha256:old', html_url: oldUrl },
+    { date: '2026/09/09', size_compressed: 2e9, size_uncompressed: 4e9,
+      digest: 'sha256:new', html_url: newUrl },
+  ] };
+  evaluate('createAllCharts()');
+  for (const field of ['compressed', 'uncompressed']) {
+    const option = evaluate(`dockerSizeOption('Size', images, 'size_${field}', new Date('2026/09/03'))`);
+    assert.equal(option.series[0].data.length, 3);
+    for (const point of option.series[0].data) {
+      handlers[`#docker-chart-${field}`]({ data: point });
+    }
+  }
+  assert.deepEqual(opened.map(args => args[0]), [oldUrl, newUrl, newUrl, oldUrl, newUrl, newUrl]);
+  assert.ok(opened.every(args => args[1] === '_blank' && args[2] === 'noopener'));
+});
+
+test('missing historical version metadata opens the versions list with an explicit hint', () => {
+  const { context, evaluate, handlers, opened } = dashboard();
+  context.images = { 'core-dependencies-jazzy': [
+    { date: '2026/09/09', size_compressed: 1e9 },
+  ] };
+  evaluate('createAllCharts()');
+  const option = evaluate("dockerSizeOption('Size', images, 'size_compressed', null)");
+  const point = option.series[0].data[0];
+  handlers['#docker-chart-compressed']({ data: point });
+  assert.equal(opened[0][0], 'https://github.com/orgs/autowarefoundation/packages/container/autoware/versions');
+  assert.match(option.tooltip.formatter({data: point, value: point.value, seriesName: 'core-dependencies-jazzy'}), /Version link unavailable/);
+  handlers['#docker-chart-compressed']({});
+  assert.equal(opened.length, 1);
 });

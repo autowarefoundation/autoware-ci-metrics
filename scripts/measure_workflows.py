@@ -11,6 +11,7 @@ print = functools.partial(print, flush=True)
 
 import github_api
 from image_tags import TAGS as CANONICAL_TAGS
+from image_version_urls import add_image_version_urls
 
 REPO = "autowarefoundation/autoware"
 
@@ -391,6 +392,8 @@ def export_to_json(health_check, docker_build_and_push, docker_images, repo_ci_r
                     "date": run["created_at"].strftime("%Y/%m/%d %H:%M:%S"),
                     "duration": run["duration"] / 3600,
                     "jobs": jobs,
+                    "html_url": run.get("html_url")
+                    or f"https://github.com/{REPO}/actions/runs/{run['id']}",
                 }
             )
         return out
@@ -473,6 +476,7 @@ if __name__ == "__main__":
 
     print(f"Loading docker image history from {args.data_dir}")
     docker_images = load_docker_image_history(args.data_dir)
+    add_image_version_urls(docker_images, args.data_dir, args.github_token)
 
     json_data = export_to_json(
         health_check, docker_build_and_push, docker_images, repo_ci_runs

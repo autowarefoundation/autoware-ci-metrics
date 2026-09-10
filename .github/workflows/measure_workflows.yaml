@@ -20,6 +20,7 @@ jobs:
       pages: write
       id-token: write
       actions: read
+      packages: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
