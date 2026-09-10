@@ -97,7 +97,10 @@ function healthCheckJobNames(runs) {
 
 function validImageSizes(entries, sizeField) {
   return (entries || [])
-    .filter(d => Number.isFinite(d[sizeField]) && d[sizeField] > 0)
+    // A size without a digest cannot identify the measured image version.
+    // Skip incomplete records in both charts and their latest-size tables.
+    .filter(d => Number.isFinite(d[sizeField]) && d[sizeField] > 0
+      && /^sha256:[0-9a-f]{64}$/.test(d.digest || ''))
     .slice().sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 

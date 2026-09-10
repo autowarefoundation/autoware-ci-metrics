@@ -64,8 +64,10 @@ test('invalid compressed measurements cannot flatten valid image history to zero
   for (const [index, flavor] of ['core', 'universe', 'universe-cuda'].entries()) {
     const tag = `${flavor}-dependencies-jazzy`;
     context.images[tag] = [
-      { date: '2026/07/17', size_compressed: (index + 1) * 1e9, size_uncompressed: 4e9 },
-      { date: '2026/07/22', size_compressed: 0, size_uncompressed: 5e9 },
+      { date: '2026/07/17', size_compressed: (index + 1) * 1e9, size_uncompressed: 4e9,
+        digest: `sha256:${String(index + 1).repeat(64)}`,
+        html_url: `https://github.com/orgs/autowarefoundation/packages/container/autoware/${index + 1}` },
+      { date: '2026/07/22', size_compressed: 0, size_uncompressed: 5e9, digest: '' },
     ];
   }
   const option = evaluate(`dockerSizeOption('Compressed', images, 'size_compressed',
@@ -78,7 +80,16 @@ test('invalid compressed measurements cannot flatten valid image history to zero
   evaluate("rawData = {docker_images: images}; renderImageSizeTable('table', 'size_compressed')");
   for (const size of ['1.00 GB', '2.00 GB', '3.00 GB']) assert.ok(table.innerHTML.includes(size));
   evaluate("renderImageSizeTable('table', 'size_uncompressed')");
-  assert.ok(table.innerHTML.includes('5.00 GB'));
+  assert.ok(table.innerHTML.includes('4.00 GB'));
+  assert.ok(!table.innerHTML.includes('5.00 GB'));
+  const uncompressed = evaluate(`dockerSizeOption('Uncompressed', images, 'size_uncompressed',
+    new Date('2026/09/03 00:00:00'))`);
+  uncompressed.series.forEach((series, index) => {
+    assert.ok(series.data.every(point => point.value[1] === 4));
+    assert.deepEqual(Array.from(series.data, point => point.html_url),
+      Array.from(option.series[index].data, point => point.html_url));
+    assert.ok(series.data.every(point => point.exactVersion));
+  });
 });
 
 test('missing measurements display a dash and an empty chart, never zero GB', () => {
@@ -114,9 +125,9 @@ test('both image charts open recorded versions, including synthetic anchors', ()
   const newUrl = 'https://github.com/orgs/autowarefoundation/packages/container/autoware/202';
   context.images = { 'core-dependencies-jazzy': [
     { date: '2026/09/01', size_compressed: 1e9, size_uncompressed: 3e9,
-      digest: 'sha256:old', html_url: oldUrl },
+      digest: `sha256:${'a'.repeat(64)}`, html_url: oldUrl },
     { date: '2026/09/09', size_compressed: 2e9, size_uncompressed: 4e9,
-      digest: 'sha256:new', html_url: newUrl },
+      digest: `sha256:${'b'.repeat(64)}`, html_url: newUrl },
   ] };
   evaluate('createAllCharts()');
   for (const field of ['compressed', 'uncompressed']) {
@@ -130,10 +141,10 @@ test('both image charts open recorded versions, including synthetic anchors', ()
   assert.ok(opened.every(args => args[1] === '_blank' && args[2] === 'noopener'));
 });
 
-test('missing historical version metadata opens the versions list with an explicit hint', () => {
+test('unresolved version links open the versions list with an explicit hint', () => {
   const { context, evaluate, handlers, opened } = dashboard();
   context.images = { 'core-dependencies-jazzy': [
-    { date: '2026/09/09', size_compressed: 1e9 },
+    { date: '2026/09/09', size_compressed: 1e9, digest: `sha256:${'a'.repeat(64)}` },
   ] };
   evaluate('createAllCharts()');
   const option = evaluate("dockerSizeOption('Size', images, 'size_compressed', null)");
@@ -143,4 +154,21 @@ test('missing historical version metadata opens the versions list with an explic
   assert.match(option.tooltip.formatter({data: point, value: point.value, seriesName: 'core-dependencies-jazzy'}), /Version link unavailable/);
   handlers['#docker-chart-compressed']({});
   assert.equal(opened.length, 1);
+});
+
+
+test('sizes without a usable digest are excluded from both charts and tables', () => {
+  const { context, evaluate, table } = dashboard();
+  context.images = { 'core-dependencies-jazzy': [
+    { date: '2026/09/08', size_compressed: 1e9, size_uncompressed: 4e9, digest: '' },
+    { date: '2026/09/09', size_compressed: 2e9, size_uncompressed: 5e9, digest: 'sha256:invalid' },
+  ] };
+  evaluate('rawData = {docker_images: images}');
+  for (const field of ['compressed', 'uncompressed']) {
+    const option = evaluate(`dockerSizeOption('Size', images, 'size_${field}', null)`);
+    assert.equal(option.series[0].data.length, 0);
+    assert.match(option.graphic.elements[0].style.text, /No image size measurements/);
+    evaluate(`renderImageSizeTable('table', 'size_${field}')`);
+    assert.ok(table.innerHTML.includes('—'));
+  }
 });
