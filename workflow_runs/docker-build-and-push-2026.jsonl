@@ -200,3 +200,5 @@
 {"run_id": 36433168292, "created_at": "2026-09-28T14:04:04+00:00", "duration": 6496.0, "jobs": {}, "conclusion": "success", "html_url": "https://github.com/autowarefoundation/autoware/actions/runs/36433168292"}
 {"run_id": 36433674780, "created_at": "2026-09-28T14:08:06+00:00", "duration": 13641.0, "jobs": {}, "conclusion": "success", "html_url": "https://github.com/autowarefoundation/autoware/actions/runs/36433674780"}
 {"run_id": 36447886879, "created_at": "2026-09-28T16:00:37+00:00", "duration": 13188.0, "jobs": {}, "conclusion": "success", "html_url": "https://github.com/autowarefoundation/autoware/actions/runs/36447886879"}
+{"run_id": 36587967688, "created_at": "2026-09-29T15:08:58+00:00", "duration": 6384.0, "jobs": {}, "conclusion": "success", "html_url": "https://github.com/autowarefoundation/autoware/actions/runs/36587967688"}
+{"run_id": 36592539613, "created_at": "2026-09-29T15:44:49+00:00", "duration": 10798.0, "jobs": {}, "conclusion": "success", "html_url": "https://github.com/autowarefoundation/autoware/actions/runs/36592539613"}
