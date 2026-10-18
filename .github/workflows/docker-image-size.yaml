@@ -8,7 +8,7 @@ on:
 
 jobs:
   check-digests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
@@ -42,7 +42,7 @@ jobs:
   measure:
     needs: check-digests
     if: ${{ needs.check-digests.outputs.should-measure == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
