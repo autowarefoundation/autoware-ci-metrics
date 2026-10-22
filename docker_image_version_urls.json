@@ -231,6 +231,10 @@
     "checked_at": "2026-09-10T00:30:14.386781+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/819101149"
   },
+  "sha256:33d0824e7c60e8dbfd10bbd4ba263207c46db5289360ae092d6461d6bbc547fc": {
+    "checked_at": "2026-10-22T05:52:40.729492+00:00",
+    "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1421650582"
+  },
   "sha256:345b088bac8326cbbd026dc1174fc9717c823890e410aad9cec3ba2bab4571e8": {
     "checked_at": "2026-09-29T08:09:52.073806+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1306793526"
@@ -278,6 +282,10 @@
   "sha256:456522dc09498ed66c02fe0d6ae2137b112797cd103abc7f236a4cd6da028602": {
     "checked_at": "2026-10-21T07:19:47.406345+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1417057603"
+  },
+  "sha256:458cc888eb38b1ff6efea3acf642f2d287f59bc18496916ef85346c75e6f3b78": {
+    "checked_at": "2026-10-22T05:52:40.729492+00:00",
+    "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1420495098"
   },
   "sha256:471d184c8a23720e34b144ef73ba489d6a4d2fdf24297e8f2aabdaddd9d009b8": {
     "checked_at": "2026-09-10T00:30:14.386781+00:00",
@@ -354,6 +362,10 @@
   "sha256:5c635ab1b950183766821d5a6a98b5b96d1ace8070fbbe885b38022ba662cb3f": {
     "checked_at": "2026-09-10T00:30:14.386781+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/835797171"
+  },
+  "sha256:5ce55f5aea6a15baaf12568a631560b534f9d5e0ee5eaa959cdc2a27b084ff29": {
+    "checked_at": "2026-10-22T05:52:40.729492+00:00",
+    "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1420564018"
   },
   "sha256:5e2f23220c255b75dc4d51bad956c2092f1490e1c371dd062e09ad8f3b113818": {
     "checked_at": "2026-09-10T00:30:14.386781+00:00",
@@ -498,6 +510,10 @@
   "sha256:852a709d70e6dc45ff8a20e0261507fb1e092656caf00bd2abb7e128fe584e36": {
     "checked_at": "2026-10-19T05:42:55.168637+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1406019043"
+  },
+  "sha256:8575bdc730751a6f457f8ca4a4578e69eb44e7b07394eda857f7266457344be7": {
+    "checked_at": "2026-10-22T05:52:40.729492+00:00",
+    "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1421720763"
   },
   "sha256:866a0b9f7067402df49254760dbc344fe0715d349310b84c1c0d7015fdc78299": {
     "checked_at": "2026-09-10T00:30:14.386781+00:00",
@@ -715,6 +731,10 @@
     "checked_at": "2026-10-19T05:42:55.168637+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1405976176"
   },
+  "sha256:c3bb2b26a5fbfe84877c5f2b0e5cef3e7ee06ade497a69e4d08a7576ac21ae48": {
+    "checked_at": "2026-10-22T05:52:40.729492+00:00",
+    "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1420351802"
+  },
   "sha256:c5e8abca24eee277bd8c24c64934b19d907ea0075152fce2ca0bcd641372a8ca": {
     "checked_at": "2026-10-15T03:59:58.329935+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1383329284"
@@ -766,6 +786,10 @@
   "sha256:d1f1caec2c84e9e28213770868ccac22ffde66eba30c621bc04c50ae87bb969b": {
     "checked_at": "2026-09-10T00:30:14.386781+00:00",
     "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/819230440"
+  },
+  "sha256:d201668f96628fd1b5de422b133b40f5310bdcca7e1c9099f4c97a6c486c50ae": {
+    "checked_at": "2026-10-22T05:52:40.729492+00:00",
+    "html_url": "https://github.com/orgs/autowarefoundation/packages/container/autoware/1420326055"
   },
   "sha256:d24a2461b07fbadb9c661b5ed7b2db65c70d6f8834a1cd86666fde86a17961d2": {
     "checked_at": "2026-09-10T00:30:14.386781+00:00",
