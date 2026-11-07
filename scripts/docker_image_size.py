@@ -260,8 +260,8 @@ def main() -> int:
         default="",
         help=(
             "Comma-separated subset of canonical tags to measure (defaults to all "
-            "six). Used by the workflow's digest-check stage to skip unchanged "
-            "images."
+            "tags in image_tags.py). Used by the workflow's digest-check stage "
+            "to skip unchanged images."
         ),
     )
     args = parser.parse_args()

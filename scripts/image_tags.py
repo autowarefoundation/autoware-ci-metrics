@@ -15,6 +15,7 @@ BASE_TAGS: list[str] = [
     "core-dependencies",
     "universe-dependencies",
     "universe-dependencies-cuda",
+    "core-dependencies-cuda",
 ]
 
 # Flat list, base outer / distro inner — pairs the same flavor across distros
