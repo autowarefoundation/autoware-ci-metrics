@@ -17,8 +17,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-      pages: write
-      id-token: write
       actions: read
       packages: read
     steps:
@@ -75,5 +73,14 @@ jobs:
         with:
           path: public/
 
+  # deploy-pages runs in its own job: in the same job as the upload, it can miss the artifact that was just uploaded.
+  # See https://github.com/actions/deploy-pages/issues/451.
+  deploy:
+    needs: measure_workflows
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    steps:
       - name: Publish
         uses: actions/deploy-pages@v5
